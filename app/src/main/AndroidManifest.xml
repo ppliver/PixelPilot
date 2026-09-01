@@ -13,7 +13,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.BIND_VPN_SERVICE" />
+    <!-- <uses-permission android:name="android.permission.BIND_VPN_SERVICE" /> 已禁用：VPN功能已移除 -->
 
     <application
         android:allowBackup="true"
@@ -24,15 +24,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:usesCleartextTraffic="true"
         android:supportsRtl="true">
-        <service
-            android:name=".WfbNgVpnService"
-            android:label="Wfb-Ng VPN Service"
-            android:permission="android.permission.BIND_VPN_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.net.VpnService" />
-            </intent-filter>
-        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"

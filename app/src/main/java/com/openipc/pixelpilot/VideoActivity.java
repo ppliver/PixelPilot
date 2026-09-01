@@ -15,7 +15,6 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.hardware.usb.UsbManager;
 import android.net.Uri;
-import android.net.VpnService;
 import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -61,10 +60,12 @@ import com.openipc.pixelpilot.osd.OSDElement;
 import com.openipc.pixelpilot.osd.OSDManager;
 import com.openipc.videonative.DecodingInfo;
 import com.openipc.videonative.IVideoParamsChanged;
+import com.openipc.mavlink.MavlinkJoystickController;
+import com.openipc.pixelpilot.JoystickView;
 import com.openipc.videonative.VideoPlayer;
-import com.openipc.wfbngrtl8812.WfbNGStats;
-import com.openipc.wfbngrtl8812.WfbNGStatsChanged;
-import com.openipc.wfbngrtl8812.WfbNgLink;
+// import com.openipc.wfbngrtl8812.WfbNGStats;  // 已禁用：wfbngrtl8812 模块已移除
+// import com.openipc.wfbngrtl8812.WfbNGStatsChanged;  // 已禁用：wfbngrtl8812 模块已移除
+// import com.openipc.wfbngrtl8812.WfbNgLink;  // 已禁用：wfbngrtl8812 模块已移除
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -101,7 +102,7 @@ import java.util.regex.Pattern;
 // Most basic implementation of an activity that uses VideoNative to stream a video
 // Into an Android Surface View
 public class VideoActivity extends AppCompatActivity implements IVideoParamsChanged,
-        WfbNGStatsChanged, MavlinkUpdate, SettingsChanged {
+        MavlinkUpdate, SettingsChanged {
     private static final String TAG = "pixelpilot";
     private static final int PICK_KEY_REQUEST_CODE = 1;
     private static final int PICK_DVR_REQUEST_CODE = 2;
@@ -124,9 +125,9 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
     };
     protected DecodingInfo mDecodingInfo;
     int lastVideoW = 0, lastVideoH = 0, lastCodec = 1;
-    WfbLinkManager wfbLinkManager;
+    // WfbLinkManager wfbLinkManager;  // 已禁用：wfbngrtl8812 模块已移除
     BroadcastReceiver batteryReceiver;
-    VideoPlayer videoPlayer;
+    private VideoPlayer videoPlayer;
     private ActivityVideoBinding binding;
     private OSDManager osdManager;
     private ParcelFileDescriptor dvrFd = null;
@@ -136,7 +137,12 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
     private boolean isVRMode = false;
     private ConstraintLayout constraintLayout;
     private ConstraintSet constraintSet;
-    private WfbNgLink wfbLink;
+    // WfbNgLink wfbLink;  // 已禁用：wfbngrtl8812 模块已移除
+
+    // 虚拟摇杆相关
+    private JoystickView joystickLeft;
+    private JoystickView joystickRight;
+    private MavlinkJoystickController joystickController;
 
     private ObjectDetectorHelper objectDetectorHelper;
     private ExecutorService objectDetectionExecutor;
@@ -279,8 +285,8 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         // UI Setup
         initializeUI();
 
-        // WFB-NG Setup
-        initializeWfbNg();
+        // WFB-NG Setup (已禁用：wfbngrtl8812 模块)
+        // initializeWfbNg();
 
         // Options like tx power must be initialized explicitly
         initDefaultOptions();
@@ -306,8 +312,11 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         // Battery Receiver
         setupBatteryReceiver();
 
-        // wfbNg VPN Service
-        startVpnService();
+        // wfbNg VPN Service (已禁用)
+        // startVpnService();
+        
+        // 虚拟摇杆设置
+        setupJoysticks();
     }
 
     // ----------------------------------------------------------------------------
@@ -328,13 +337,9 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
     }
 
     // ----------------------------------------------------------------------------
-    // WFB-NG SETUP
+    // WFB-NG SETUP (已禁用：wfbngrtl8812 模块)
     // ----------------------------------------------------------------------------
-
-    /**
-     * Initializes WFB-NG related logic such as setting default gs.key and linking
-     * to WFB-NG stats changes.
-     */
+    /*
     private void initializeWfbNg() {
         setDefaultGsKey();
         copyGSKey();
@@ -342,6 +347,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         wfbLink.SetWfbNGStatsChanged(this);
         wfbLinkManager = new WfbLinkManager(this, binding, wfbLink);
     }
+    */
 
     // ----------------------------------------------------------------------------
     // VIDEO PLAYER SETUP
@@ -521,6 +527,60 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         SharedPreferences.Editor editor = sp.edit();
         editor.putInt(key, progress);
         editor.apply();
+    }
+
+
+    // ----------------------------------------------------------------------------
+    // JOYSTICK SETUP
+    // ----------------------------------------------------------------------------
+
+    /**
+     * 初始化虚拟摇杆控件
+     */
+    private void setupJoysticks() {
+        joystickLeft = findViewById(R.id.joystick_left);
+        joystickRight = findViewById(R.id.joystick_right);
+
+        // 初始化MAVLink摇杆控制器
+        joystickController = new MavlinkJoystickController(this);
+        joystickController.setEnabled(true);
+
+        // 左摇杆监听 - 控制横滚和俯仰
+        joystickLeft.setOnJoystickListener(new JoystickView.OnJoystickListener() {
+            @Override
+            public void onMove(float normalizedX, float normalizedY, float strength, float angle) {
+                // 左摇杆：X=横滚, Y=俯仰
+                if (joystickController != null) {
+                    joystickController.sendLeftJoystick(normalizedX, normalizedY);
+                }
+            }
+
+            @Override
+            public void onRelease() {
+                // 释放时回中
+                if (joystickController != null) {
+                    joystickController.sendLeftJoystick(0f, 0f);
+                }
+            }
+        });
+
+        // 右摇杆监听 - 控制油门和偏航
+        joystickRight.setOnJoystickListener(new JoystickView.OnJoystickListener() {
+            @Override
+            public void onMove(float normalizedX, float normalizedY, float strength, float angle) {
+                // 右摇杆：Y=油门, X=偏航
+                if (joystickController != null) {
+                    joystickController.sendRightJoystick(normalizedX, normalizedY);
+                }
+            }
+
+            @Override
+            public void onRelease() {
+                // 释放时保持当前位置（油门保持）
+            }
+        });
+
+        Log.d(TAG, "Joysticks initialized");
     }
 
     // ----------------------------------------------------------------------------
@@ -738,7 +798,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             editor.putBoolean("adaptive_link_enabled", newState);
             editor.apply();
             // Call instance method on the WfbNgLink instance via the wfbLinkManager.
-            wfbLink.nativeSetAdaptiveLinkEnabled(newState);
+            // wfbLink.nativeSetAdaptiveLinkEnabled(newState);  // 已禁用：wfbngrtl8812 模块已移除
             return true;
         });
 
@@ -761,7 +821,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
                 editor.putInt("adaptive_tx_power", power);
                 editor.apply();
                 // Call instance method on the WfbNgLink instance via the wfbLinkManager.
-                wfbLink.nativeSetTxPower(power);
+                // wfbLink.nativeSetTxPower(power);  // 已禁用：wfbngrtl8812 模块已移除
                 return true;
             });
         }
@@ -779,7 +839,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             editor.putBoolean("custom_fec_enabled", newState);
             editor.apply();
             // Call instance method on the WfbNgLink instance via the wfbLinkManager.
-            wfbLink.nativeSetUseFec(newState ? 1 : 0);
+            // wfbLink.nativeSetUseFec(newState ? 1 : 0);  // 已禁用：wfbngrtl8812 模块已移除
             return true;
         });
 
@@ -794,7 +854,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             SharedPreferences.Editor editor = getSharedPreferences("general", MODE_PRIVATE).edit();
             editor.putBoolean("custom_ldpc_enabled", newState);
             editor.apply();
-            wfbLink.nativeSetUseLdpc(newState ? 1 : 0);
+            // wfbLink.nativeSetUseLdpc(newState ? 1 : 0);  // 已禁用：wfbngrtl8812 模块已移除
             return true;
         });
 
@@ -809,7 +869,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             SharedPreferences.Editor editor = getSharedPreferences("general", MODE_PRIVATE).edit();
             editor.putBoolean("custom_stbc_enabled", newState);
             editor.apply();
-            wfbLink.nativeSetUseStbc(newState ? 1 : 0);
+            // wfbLink.nativeSetUseStbc(newState ? 1 : 0);  // 已禁用：wfbngrtl8812 模块已移除
             return true;
         });
 
@@ -882,17 +942,17 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         SharedPreferences prefs = getSharedPreferences("general", MODE_PRIVATE);
         boolean adaptiveEnabled = prefs.getBoolean("adaptive_link_enabled", true);
         int adaptiveTxPower = prefs.getInt("adaptive_tx_power", 20);
-        wfbLink.nativeSetAdaptiveLinkEnabled(adaptiveEnabled);
-        wfbLink.nativeSetTxPower(adaptiveTxPower);
+        // wfbLink.nativeSetAdaptiveLinkEnabled(adaptiveEnabled);
+        // wfbLink.nativeSetTxPower(adaptiveTxPower);  // 已禁用
         boolean fecEnabled = prefs.getBoolean("custom_fec_enabled", true);
-        wfbLink.nativeSetUseFec(fecEnabled ? 1 : 0);
+        // wfbLink.nativeSetUseFec(fecEnabled ? 1 : 0);  // 已禁用
 
         // LDPC and STBC default options
         boolean ldpcEnabled = prefs.getBoolean("custom_ldpc_enabled", true);
-        wfbLink.nativeSetUseLdpc(ldpcEnabled ? 1 : 0);
+        // wfbLink.nativeSetUseLdpc(ldpcEnabled ? 1 : 0);  // 已禁用
 
         boolean stbcEnabled = prefs.getBoolean("custom_stbc_enabled", true);
-        wfbLink.nativeSetUseStbc(stbcEnabled ? 1 : 0);
+        // wfbLink.nativeSetUseStbc(stbcEnabled ? 1 : 0);  // 已禁用
 
         setFecThresholdsFromPrefs();
     }
@@ -905,9 +965,9 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         int recTo3 = prefs.getInt("fec_recovered_to_3", 24);
         int recTo2 = prefs.getInt("fec_recovered_to_2", 14);
         int recTo1 = prefs.getInt("fec_recovered_to_1", 8);
-        if (wfbLink != null) {
-            wfbLink.setFecThresholds(lostTo5, recTo4, recTo3, recTo2, recTo1);
-        }
+        // if (wfbLink != null) {
+        //     wfbLink.setFecThresholds(lostTo5, recTo4, recTo3, recTo2, recTo1);
+        // }  // 已禁用
     }
 
     /**
@@ -1197,7 +1257,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
     }
 
     // ----------------------------------------------------------------------------
-    // VPN SERVICE
+    /* VPN SERVICE (已禁用)
     // ----------------------------------------------------------------------------
     private void startVpnService() {
         int VPN_REQUEST_CODE = 100;
@@ -1209,8 +1269,9 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             Intent serviceIntent = new Intent(this, WfbNgVpnService.class);
             startService(serviceIntent);
         }
-
     }
+    */
+
 
     private Uri openDvrFile() {
         String dvrFolder = getSharedPreferences("general",
@@ -1239,7 +1300,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             if (dvrUri != null) {
                 startDvr(dvrUri);
             } else {
-                wfbLinkManager.stopAdapters();
+                // wfbLinkManager.stopAdapters();  // 已禁用
                 videoPlayer.stop();
                 videoPlayer.stopAudio();
 
@@ -1330,7 +1391,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
                     InputStream inputStream = getContentResolver().openInputStream(uri);
                     setGsKey(inputStream);
                     copyGSKey();
-                    wfbLinkManager.refreshKey();
+                    // wfbLinkManager.refreshKey();  // 已禁用：wfbngrtl8812 模块已移除
                     inputStream.close();
                 } catch (IOException e) {
                     Log.e(TAG, "Failed to import gs.key from " + uri);
@@ -1361,16 +1422,9 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             if (data != null && data.getData() != null) {
                 handleSelectedModelUri(data);
             }
-        } else if (requestCode == 100) {  // VPN_REQUEST_CODE is 100
-            if (resultCode == RESULT_OK) {
-                // VPN permission granted, start the VPN service
-                Intent serviceIntent = new Intent(this, WfbNgVpnService.class);
-                startService(serviceIntent);
-            } else {
-                // VPN permission not granted
-                Log.e(TAG, "VPN permission was not granted by the user.");
-            }
-        } else {
+        // } else if (requestCode == 100) {  // VPN (已禁用)
+        //     if (resultCode == RESULT_OK) { ... }
+        // } else {
             Log.w(TAG, "onActivityResult: unknown request code " + requestCode);
         }
     }
@@ -1424,7 +1478,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         IntentFilter usbFilter = new IntentFilter();
         usbFilter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         usbFilter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-        usbFilter.addAction(WfbLinkManager.ACTION_USB_PERMISSION);
+        // usbFilter.addAction(WfbLinkManager.ACTION_USB_PERMISSION);  // 已禁用
         IntentFilter batFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 
         if (Build.VERSION.SDK_INT >= 33) {
@@ -1438,7 +1492,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
 
     public void unregisterReceivers() {
         try {
-            unregisterReceiver(wfbLinkManager);
+            // unregisterReceiver(wfbLinkManager);  // 已禁用
         } catch (IllegalArgumentException ignored) {
         }
         try {
@@ -1457,13 +1511,9 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
 
         videoPlayer.stop();
         videoPlayer.stopAudio();
-        wfbLinkManager.stopAdapters();
+        // wfbLinkManager.stopAdapters();  // 已禁用
 
-        // Stop VPN service
-        Log.w(TAG, "onPause: stopping service");
-        Intent intent = new Intent(this, WfbNgVpnService.class);
-        intent.setAction("STOP_SERVICE");
-        startService(intent);
+        // Stop VPN service (已禁用)
     }
 
     @Override
@@ -1471,7 +1521,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         MavlinkNative.nativeStop(this);
         handler.removeCallbacks(runnable);
         unregisterReceivers();
-        wfbLinkManager.stopAdapters();
+        // wfbLinkManager.stopAdapters();  // 已禁用
         videoPlayer.stop();
         videoPlayer.stopAudio();
         super.onStop();
@@ -1481,13 +1531,13 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
     protected void onResume() {
         registerReceivers();
 
-        wfbLinkManager.setChannel(getChannel(this));
-        wfbLinkManager.setBandwidth(getBandwidth(this));
+        // wfbLinkManager.setChannel(getChannel(this));  // 已禁用
+        // wfbLinkManager.setBandwidth(getBandwidth(this));  // 已禁用
 
         // On resume is called when the app is reopened, a device might have been plugged since the last time it started.
-        wfbLinkManager.refreshAdapters();
+        // wfbLinkManager.refreshAdapters();  // 已禁用
 
-        wfbLinkManager.startAdapters();
+        // wfbLinkManager.startAdapters();  // 已禁用
         videoPlayer.start();
         updateUdpForwardingState();
         videoPlayer.startAudio();
@@ -1498,7 +1548,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
 
         osdManager.restoreOSDConfig();
 
-        startVpnService();
+        // startVpnService();  // 已禁用
 
         super.onResume();
     }
@@ -1513,9 +1563,9 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         SharedPreferences.Editor editor = prefs.edit();
         editor.putInt("wifi-channel", channel);
         editor.apply();
-        wfbLinkManager.stopAdapters();
-        wfbLinkManager.setChannel(channel);
-        wfbLinkManager.startAdapters();
+        // wfbLinkManager.stopAdapters();  // 已禁用
+        // wfbLinkManager.setChannel(channel);  // 已禁用
+        // wfbLinkManager.startAdapters();  // 已禁用
     }
 
     @Override
@@ -1528,9 +1578,9 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         SharedPreferences.Editor editor = prefs.edit();
         editor.putInt("bandwidth", bandwidth);
         editor.apply();
-        wfbLinkManager.stopAdapters();
-        wfbLinkManager.setBandwidth(bandwidth);
-        wfbLinkManager.startAdapters();
+        // wfbLinkManager.stopAdapters();  // 已禁用
+        // wfbLinkManager.setBandwidth(bandwidth);  // 已禁用
+        // wfbLinkManager.startAdapters();  // 已禁用
     }
 
     @Override
@@ -1579,73 +1629,6 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
                     lastVideoW, lastVideoH, decodingInfo.currentFPS,
                     decodingInfo.currentKiloBitsPerSecond / 1000,
                     decodingInfo.avgTotalDecodingTime_ms));
-        });
-    }
-
-    @Override
-    public void onWfbNgStatsChanged(WfbNGStats data) {
-        runOnUiThread(() -> {
-            if (data.count_p_all > 0) {
-                binding.tvMessage.setVisibility(View.INVISIBLE);
-                binding.tvMessage.setText("");
-
-                if (data.count_p_dec_err > 0) {
-                    binding.tvLinkStatus.setText("Waiting for session key.");
-                } else {
-                    // NOTE: The order of the entries when being added to the entries array
-                    // determines their position around the center of the chart.
-                    ArrayList<PieEntry> entries = new ArrayList<>();
-                    entries.add(new PieEntry((float) data.count_p_dec_ok / data.count_p_all));
-                    entries.add(new PieEntry((float) data.count_p_fec_recovered / data.count_p_all));
-                    entries.add(new PieEntry((float) data.count_p_lost / data.count_p_all));
-
-                    PieDataSet dataSet = new PieDataSet(entries, "Link Status");
-                    dataSet.setDrawIcons(false);
-                    dataSet.setDrawValues(false);
-
-                    ArrayList<Integer> colors = new ArrayList<>();
-                    colors.add(getColor(R.color.colorGreen));
-                    colors.add(getColor(R.color.colorYellow));
-                    colors.add(getColor(R.color.colorRed));
-                    dataSet.setColors(colors);
-
-                    PieData pieData = new PieData(dataSet);
-                    pieData.setValueFormatter(new PercentFormatter());
-                    pieData.setValueTextSize(11f);
-                    pieData.setValueTextColor(Color.WHITE);
-
-                    int rssiColor = getColor(R.color.colorGreenBg);
-                    if (data.avg_rssi < 60 && 30 <= data.avg_rssi) {
-                        rssiColor = getColor(R.color.colorYellow);
-                    } else if (data.avg_rssi < 30) {
-                        rssiColor = getColor(R.color.colorRed);
-                    }
-
-                    binding.pcLinkStat.setData(pieData);
-                    binding.pcLinkStat.setCenterTextSize(22);
-                    binding.pcLinkStat.setCenterText("" + data.avg_rssi);
-                    binding.pcLinkStat.setCenterTextColor(rssiColor);
-                    binding.pcLinkStat.invalidate();
-
-                    // Set link icon tint color.
-                    int color = getColor(R.color.colorGreenBg);
-                    if ((float) data.count_p_fec_recovered / data.count_p_all > 0.2) {
-                        color = getColor(R.color.colorYellowBg);
-                    }
-                    if (data.count_p_lost > 0) {
-                        color = getColor(R.color.colorRedBg);
-                    }
-                    binding.imgLinkStatus.setImageTintList(ColorStateList.valueOf(color));
-
-                    binding.tvLinkStatus.setText(String.format("Outgoing %3d Decoded %3d Recovered %3d Lost %3d",
-                            data.count_p_outgoing,
-                            data.count_p_dec_ok,
-                            data.count_p_fec_recovered,
-                            data.count_p_lost));
-                }
-            } else {
-                binding.tvLinkStatus.setText("No Video Link");
-            }
         });
     }
 

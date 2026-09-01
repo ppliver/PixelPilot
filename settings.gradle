@@ -26,5 +26,5 @@ dependencyResolutionManagement {
 rootProject.name = "PixelPilot"
 include(":app")
 include(":app:videonative")
-include(":app:wfbngrtl8812")
+# include(":app:wfbngrtl8812")  // 已禁用：wfbngrtl8812 模块不完整，缺少 zfex.c、Hal8812PhyReg.h 等文件
 include(":app:mavlink")

@@ -10,8 +10,8 @@ android {
         applicationId = "com.openipc.pixelpilot"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.23.0"
+        versionCode = 2
+        versionName = "0.24.0"
 
         ndk {
             abiFilters.add("arm64-v8a")
@@ -58,7 +58,7 @@ android {
 dependencies {
     implementation(project(":app:mavlink"))
     implementation(project(":app:videonative"))
-    implementation(project(":app:wfbngrtl8812"))
+    # implementation(project(":app:wfbngrtl8812"))  // 已禁用：wfbngrtl8812 模块不完整
 
     implementation(libs.appcompat)
     implementation(libs.material)
