@@ -4,14 +4,14 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
 /**
- * 虚拟摇杆控件 - 支持双摇杆、拖拽位置、透明度调节
- * 参考 RC-Pilot Pro 设计
+ * 虚拟摇杆控件 - 参考 RC-Pilot Pro 样式
  */
 public class VirtualJoystick extends View {
 
@@ -19,36 +19,31 @@ public class VirtualJoystick extends View {
         void onMove(int pwmX, int pwmY);
     }
 
-    // 摇杆状态
     private static final int STATE_DRAGGING_STICK = 1;
     private static final int STATE_DRAGGING_CONTAINER = 2;
+    private static final int STATE_RESIZING = 3;
 
-    // 绘制参数
     private Paint mPaintBackground;
-    private Paint mPaintCrosshair;
     private Paint mPaintBorder;
+    private Paint mPaintCrosshair;
     private Paint mPaintButton;
-    private Paint mPaintButtonCenter;
     private Paint mPaintText;
     private Paint mPaintLabel;
+    private Paint mPaintHint;
+    private Paint mPaintArrow;
 
-    // 尺寸
-    private int mSize;           // 控件总大小
+    private int mSize;
     private int mCenterX;
     private int mCenterY;
     private int mBorderRadius;
     private int mButtonRadius;
-
-    // 摇杆按钮位置
-    private float mStickX;
-    private float mStickY;
     private float mMaxTravel;
 
-    // 位置偏移（用于拖拽）
+    private float mStickX;
+    private float mStickY;
     private float mOffsetX;
     private float mOffsetY;
 
-    // 触摸追踪
     private int mActivePointerId = -1;
     private int mTouchState = 0;
     private float mDownX;
@@ -57,21 +52,16 @@ public class VirtualJoystick extends View {
     private float mStartOffsetY;
     private float mStartStickX;
     private float mStartStickY;
+    private int mStartSize;
 
-    // 配置
     private boolean mLocked = true;
     private boolean mStickyY = false;
     private int mChannel = 1;
-    private float mOpacity = 1.0f;
-    private int mButtonColor = Color.parseColor("#00CCFF");
-    private int mBorderColor = Color.parseColor("#88FFFFFF");
-    private int mBackgroundColor = Color.parseColor("#99000000");
+    private float mOpacity = 0.9f;
 
-    // PWM值
     private int mCurrentPwmX = 1500;
     private int mCurrentPwmY = 1500;
 
-    // 监听器
     private OnMoveListener mListener;
 
     public VirtualJoystick(Context context) {
@@ -92,49 +82,47 @@ public class VirtualJoystick extends View {
     private void init() {
         setClickable(true);
         
-        // 背景
         mPaintBackground = new Paint();
-        mPaintBackground.setColor(mBackgroundColor);
+        mPaintBackground.setColor(Color.parseColor("#CC1a1a1a"));
         mPaintBackground.setAntiAlias(true);
         
-        // 十字准星
+        mPaintBorder = new Paint();
+        mPaintBorder.setColor(Color.parseColor("#D4A574"));
+        mPaintBorder.setStyle(Paint.Style.STROKE);
+        mPaintBorder.setStrokeWidth(6);
+        mPaintBorder.setAntiAlias(true);
+        
         mPaintCrosshair = new Paint();
         mPaintCrosshair.setColor(Color.parseColor("#44FFFFFF"));
         mPaintCrosshair.setStrokeWidth(2);
         mPaintCrosshair.setAntiAlias(true);
         
-        // 边框
-        mPaintBorder = new Paint();
-        mPaintBorder.setColor(mBorderColor);
-        mPaintBorder.setStyle(Paint.Style.STROKE);
-        mPaintBorder.setStrokeWidth(4);
-        mPaintBorder.setAntiAlias(true);
-        
-        // 按钮
         mPaintButton = new Paint();
-        mPaintButton.setColor(mButtonColor);
+        mPaintButton.setColor(Color.parseColor("#00CCFF"));
         mPaintButton.setAntiAlias(true);
         mPaintButton.setAlpha(220);
         
-        // 按钮中心
-        mPaintButtonCenter = new Paint();
-        mPaintButtonCenter.setColor(Color.WHITE);
-        mPaintButtonCenter.setAntiAlias(true);
-        mPaintButtonCenter.setAlpha(180);
-        
-        // PWM显示文字
         mPaintText = new Paint();
         mPaintText.setColor(Color.parseColor("#00FFFF"));
-        mPaintText.setTextSize(28);
+        mPaintText.setTextSize(26);
         mPaintText.setAntiAlias(true);
         mPaintText.setTextAlign(Paint.Align.CENTER);
         
-        // 通道标签
         mPaintLabel = new Paint();
         mPaintLabel.setColor(Color.parseColor("#AAAAAA"));
-        mPaintLabel.setTextSize(18);
+        mPaintLabel.setTextSize(16);
         mPaintLabel.setAntiAlias(true);
         mPaintLabel.setTextAlign(Paint.Align.CENTER);
+        
+        mPaintHint = new Paint();
+        mPaintHint.setColor(Color.parseColor("#FFAA00"));
+        mPaintHint.setTextSize(22);
+        mPaintHint.setAntiAlias(true);
+        mPaintHint.setTextAlign(Paint.Align.CENTER);
+        
+        mPaintArrow = new Paint();
+        mPaintArrow.setColor(Color.parseColor("#FFD700"));
+        mPaintArrow.setAntiAlias(true);
     }
 
     @Override
@@ -154,11 +142,10 @@ public class VirtualJoystick extends View {
         
         mCenterX = w / 2;
         mCenterY = h / 2;
-        mBorderRadius = Math.min(w, h) / 2 - 12;
+        mBorderRadius = Math.min(w, h) / 2 - 15;
         mButtonRadius = mBorderRadius / 3;
         mMaxTravel = mBorderRadius * 0.7f;
         
-        // 重置摇杆到中心
         resetStick();
     }
 
@@ -166,18 +153,15 @@ public class VirtualJoystick extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         
-        // 应用透明度
-        int bgAlpha = (int)(255 * mOpacity);
+        int bgAlpha = (int)(204 * mOpacity);
         mPaintBackground.setAlpha(bgAlpha);
-        int borderAlpha = (int)((mBorderColor >> 24) * mOpacity);
-        mPaintBorder.setAlpha(borderAlpha);
         
         // 绘制半透明背景
         canvas.drawCircle(mCenterX, mCenterY, mBorderRadius, mPaintBackground);
         
         // 绘制十字准星
-        int crossStart = mBorderRadius / 3;
-        int crossEnd = mBorderRadius * 2 / 3;
+        int crossStart = mBorderRadius / 4;
+        int crossEnd = mBorderRadius * 3 / 4;
         canvas.drawLine(mCenterX - crossEnd, mCenterY, mCenterX - crossStart, mCenterY, mPaintCrosshair);
         canvas.drawLine(mCenterX + crossStart, mCenterY, mCenterX + crossEnd, mCenterY, mPaintCrosshair);
         canvas.drawLine(mCenterX, mCenterY - crossEnd, mCenterX, mCenterY - crossStart, mPaintCrosshair);
@@ -187,26 +171,72 @@ public class VirtualJoystick extends View {
         canvas.drawCircle(mCenterX, mCenterY, mBorderRadius, mPaintBorder);
         
         // 绘制摇杆按钮
-        canvas.drawCircle(mStickX + mCenterX, mStickY + mCenterY, mButtonRadius, mPaintButton);
-        canvas.drawCircle(mStickX + mCenterX, mStickY + mCenterY, mButtonRadius / 3, mPaintButtonCenter);
+        canvas.drawCircle(mCenterX + mStickX, mCenterY + mStickY, mButtonRadius, mPaintButton);
         
-        // 绘制 PWM 值
-        String pwmText = mCurrentPwmX + " | " + mCurrentPwmY;
-        canvas.drawText(pwmText, mCenterX, mCenterY + mBorderRadius + 35, mPaintText);
+        // 绘制四向箭头指示器
+        drawArrow(canvas, mCenterX, mCenterY - mBorderRadius + 30, 0);
+        drawArrow(canvas, mCenterX, mCenterY + mBorderRadius - 30, 180);
+        drawArrow(canvas, mCenterX - mBorderRadius + 30, mCenterY, 270);
+        drawArrow(canvas, mCenterX + mBorderRadius - 30, mCenterY, 90);
         
         // 绘制通道标签
-        String label = "CH" + mChannel;
-        canvas.drawText(label, mCenterX, mCenterY - mBorderRadius - 15, mPaintLabel);
+        canvas.drawText("CH" + mChannel, mCenterX, mCenterY - mBorderRadius - 10, mPaintLabel);
         
-        // 解锁提示
+        // 绘制 PWM 值
+        canvas.drawText(mCurrentPwmX + " | " + mCurrentPwmY, mCenterX, mCenterY + mBorderRadius + 30, mPaintText);
+        
+        // 解锁提示和调整按钮
         if (!mLocked) {
-            Paint hintPaint = new Paint();
-            hintPaint.setColor(Color.parseColor("#AAFFAA00"));
-            hintPaint.setTextSize(24);
-            hintPaint.setAntiAlias(true);
-            hintPaint.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText("拖动调整", mCenterX, mCenterY + 8, hintPaint);
+            canvas.drawText("拖动调整", mCenterX, mCenterY + 8, mPaintHint);
+            drawResizeButtons(canvas);
         }
+    }
+
+    private void drawArrow(Canvas canvas, float cx, float cy, float angle) {
+        Path path = new Path();
+        float size = 10;
+        path.moveTo(cx, cy - size);
+        path.lineTo(cx - size * 0.6f, cy + size * 0.5f);
+        path.lineTo(cx + size * 0.6f, cy + size * 0.5f);
+        path.close();
+        
+        android.graphics.Matrix matrix = new android.graphics.Matrix();
+        matrix.postRotate(angle, cx, cy);
+        path.transform(matrix);
+        
+        canvas.drawPath(path, mPaintArrow);
+    }
+
+    private void drawResizeButtons(Canvas canvas) {
+        int btnY = mCenterY - mBorderRadius - 45;
+        int btnRadius = 18;
+        
+        Paint btnBg = new Paint();
+        btnBg.setColor(Color.parseColor("#CC1E3D59"));
+        btnBg.setAntiAlias(true);
+        
+        Paint btnBorder = new Paint();
+        btnBorder.setColor(Color.parseColor("#FF6B9FFF"));
+        btnBorder.setStyle(Paint.Style.STROKE);
+        btnBorder.setStrokeWidth(2);
+        btnBorder.setAntiAlias(true);
+        
+        Paint btnText = new Paint();
+        btnText.setColor(Color.WHITE);
+        btnText.setTextSize(20);
+        btnText.setAntiAlias(true);
+        btnText.setTextAlign(Paint.Align.CENTER);
+        btnText.setFakeBoldText(true);
+        
+        // 缩小按钮
+        canvas.drawCircle(mCenterX - 30, btnY, btnRadius, btnBg);
+        canvas.drawCircle(mCenterX - 30, btnY, btnRadius, btnBorder);
+        canvas.drawText("-", mCenterX - 30, btnY + 7, btnText);
+        
+        // 放大按钮
+        canvas.drawCircle(mCenterX + 30, btnY, btnRadius, btnBg);
+        canvas.drawCircle(mCenterX + 30, btnY, btnRadius, btnBorder);
+        canvas.drawText("+", mCenterX + 30, btnY + 7, btnText);
     }
 
     @Override
@@ -223,7 +253,9 @@ public class VirtualJoystick extends View {
                     mDownX = event.getX(pointerIndex);
                     mDownY = event.getY(pointerIndex);
                     
-                    if (!mLocked) {
+                    if (!mLocked && isResizeButtonClicked(mDownX, mDownY)) {
+                        mTouchState = STATE_RESIZING;
+                    } else if (!mLocked) {
                         mTouchState = STATE_DRAGGING_CONTAINER;
                         mStartOffsetX = mOffsetX;
                         mStartOffsetY = mOffsetY;
@@ -242,13 +274,16 @@ public class VirtualJoystick extends View {
                 float dy = event.getY(pointerIndex) - mDownY;
                 
                 if (mTouchState == STATE_DRAGGING_CONTAINER && !mLocked) {
-                    // 拖拽整个容器
                     mOffsetX = Math.max(0, Math.min(getWidth() - mSize, mStartOffsetX + dx));
                     mOffsetY = Math.max(0, Math.min(getHeight() - mSize, mStartOffsetY + dy));
                     setTranslationX(mOffsetX);
                     setTranslationY(mOffsetY);
+                } else if (mTouchState == STATE_RESIZING && !mLocked) {
+                    int newSize = mStartSize + (int)dx;
+                    newSize = Math.max(120, Math.min(350, newSize));
+                    setSize(newSize);
+                    mStartSize = newSize;
                 } else if (mTouchState == STATE_DRAGGING_STICK) {
-                    // 拖拽摇杆按钮
                     float newStickX = mStartStickX + dx;
                     float newStickY = mStartStickY + dy;
                     
@@ -261,7 +296,6 @@ public class VirtualJoystick extends View {
                     mStickX = newStickX;
                     mStickY = newStickY;
                     
-                    // 计算PWM值
                     mCurrentPwmX = Math.round(1500 + (mStickX / mMaxTravel) * 500);
                     mCurrentPwmY = Math.round(1500 - (mStickY / mMaxTravel) * 500);
                     mCurrentPwmX = Math.max(1000, Math.min(2000, mCurrentPwmX));
@@ -279,7 +313,6 @@ public class VirtualJoystick extends View {
             case MotionEvent.ACTION_CANCEL:
                 if (mActivePointerId == pointerId) {
                     if (mTouchState == STATE_DRAGGING_STICK) {
-                        // 松开摇杆
                         if (!mStickyY) {
                             resetStick();
                         } else {
@@ -298,6 +331,16 @@ public class VirtualJoystick extends View {
         }
         
         return true;
+    }
+
+    private boolean isResizeButtonClicked(float x, float y) {
+        float btnY = mCenterY - mBorderRadius - 45;
+        float btnRadius = 18;
+        
+        float distLeft = (float) Math.sqrt(Math.pow(x - (mCenterX - 30), 2) + Math.pow(y - btnY, 2));
+        float distRight = (float) Math.sqrt(Math.pow(x - (mCenterX + 30), 2) + Math.pow(y - btnY, 2));
+        
+        return distLeft <= btnRadius || distRight <= btnRadius;
     }
 
     private void resetStick() {
@@ -338,21 +381,6 @@ public class VirtualJoystick extends View {
 
     public float getOpacity() {
         return mOpacity;
-    }
-
-    public void setButtonColor(int color) {
-        this.mButtonColor = color;
-        invalidate();
-    }
-
-    public void setBorderColor(int color) {
-        this.mBorderColor = color;
-        invalidate();
-    }
-
-    public void setBackgroundColor(int color) {
-        this.mBackgroundColor = color;
-        invalidate();
     }
 
     public void setSize(int size) {
