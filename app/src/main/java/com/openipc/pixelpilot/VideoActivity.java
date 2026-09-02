@@ -641,17 +641,8 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         // VR submenu
         setupVRSubMenu(popup);
 
-        // Channel submenu
-        setupChannelSubMenu(popup);
-
-        // Bandwidth submenu
-        setupBandwidthSubMenu(popup);
-
         // OSD submenu
         setupOSDSubMenu(popup);
-
-        // WFB submenu
-        setupWFBSubMenu(popup);
 
         // Adaptive link submenu
         setupAdaptiveLinkSubMenu(popup);
@@ -757,21 +748,6 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
                 return false;
             });
         }
-    }
-
-    /**
-     * Submenu handling WFB-NG logic (e.g. selecting gs.key from storage).
-     */
-    private void setupWFBSubMenu(PopupMenu popup) {
-        SubMenu wfb = popup.getMenu().addSubMenu("WFB-NG key");
-        MenuItem keyBtn = wfb.add("gs.key");
-        keyBtn.setOnMenuItemClickListener(item -> {
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("*/*");
-            startActivityForResult(intent, PICK_KEY_REQUEST_CODE);
-            return true;
-        });
     }
 
     /**
