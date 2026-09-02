@@ -561,7 +561,11 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             public void onMove(float normalizedX, float normalizedY, float strength, float angle) {
                 // 左摇杆：X=横滚, Y=俯仰
                 if (joystickController != null) {
-                    joystickController.sendLeftJoystick(normalizedX, normalizedY);
+                    try {
+                        joystickController.sendLeftJoystick(normalizedX, normalizedY);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error in left joystick move", e);
+                    }
                 }
             }
 
@@ -569,7 +573,11 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             public void onRelease() {
                 // 释放时回中
                 if (joystickController != null) {
-                    joystickController.sendLeftJoystick(0f, 0f);
+                    try {
+                        joystickController.sendLeftJoystick(0f, 0f);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error in left joystick release", e);
+                    }
                 }
             }
         });
@@ -580,7 +588,11 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             public void onMove(float normalizedX, float normalizedY, float strength, float angle) {
                 // 右摇杆：Y=油门, X=偏航
                 if (joystickController != null) {
-                    joystickController.sendRightJoystick(normalizedX, normalizedY);
+                    try {
+                        joystickController.sendRightJoystick(normalizedX, normalizedY);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error in right joystick move", e);
+                    }
                 }
             }
 

@@ -114,33 +114,38 @@ public class JoystickView extends View {
             case MotionEvent.ACTION_MOVE:
                 float x = event.getX();
                 float y = event.getY();
-                
+
                 // 计算相对于中心的偏移
                 float dx = x - centerX;
                 float dy = y - centerY;
-                
+
+                // 防止除零异常
+                if (stickMaxDist <= 0) {
+                    return true;
+                }
+
                 // 计算距离和角度
                 float distance = (float) Math.sqrt(dx * dx + dy * dy);
                 float angle = (float) Math.toDegrees(Math.atan2(dy, dx)) + 90f;
                 if (angle < 0) angle += 360f;
-                
+
                 // 限制在最大范围内
                 if (distance > stickMaxDist) {
                     distance = stickMaxDist;
                     dx = dx * stickMaxDist / distance;
                     dy = dy * stickMaxDist / distance;
                 }
-                
+
                 stickX = centerX + dx;
                 stickY = centerY + dy;
-                
+
                 // 归一化输出 (-1.0 ~ 1.0)
                 float normX = dx / stickMaxDist;
                 float normY = -dy / stickMaxDist; // Y轴反转，符合MAVLink习惯
-                
+
                 // 计算力度
                 float strength = distance / stickMaxDist;
-                
+
                 if (listener != null) {
                     listener.onMove(normX, normY, strength, angle);
                 }

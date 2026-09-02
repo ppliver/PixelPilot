@@ -81,30 +81,42 @@ public class MavlinkJoystickController {
      * @param yaw 偏航 (-1.0 ~ 1.0)
      */
     public void sendJoystickData(float roll, float pitch, float throttle, float yaw) {
-        if (!enabled || socket == null) {
+        if (!enabled || socket == null || socket.isClosed()) {
             return;
         }
 
-        // 更新摇杆值
-        rcValues[RC_CH1] = normalizeToMavlink(roll, -1.0f, 1.0f);
-        rcValues[RC_CH2] = normalizeToMavlink(pitch, -1.0f, 1.0f);
-        rcValues[RC_CH3] = normalizeToMavlink(throttle, 0.0f, 1.0f);
-        rcValues[RC_CH4] = normalizeToMavlink(yaw, -1.0f, 1.0f);
+        try {
+            // 更新摇杆值
+            rcValues[RC_CH1] = normalizeToMavlink(roll, -1.0f, 1.0f);
+            rcValues[RC_CH2] = normalizeToMavlink(pitch, -1.0f, 1.0f);
+            rcValues[RC_CH3] = normalizeToMavlink(throttle, 0.0f, 1.0f);
+            rcValues[RC_CH4] = normalizeToMavlink(yaw, -1.0f, 1.0f);
 
-        // 发送 MAVLink RC_CHANNELS 消息
-        sendRcChannelsMessage();
+            // 发送 MAVLink RC_CHANNELS 消息
+            sendRcChannelsMessage();
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending joystick data", e);
+        }
     }
 
     /**
      * 单摇杆模式 (左摇杆控制横滚+俯仰，右摇杆控制油门+偏航)
      */
     public void sendLeftJoystick(float x, float y) {
-        sendJoystickData(x, -y, rcValues[RC_CH3] / 65535.0f, rcValues[RC_CH4]);
+        try {
+            sendJoystickData(x, -y, rcValues[RC_CH3] / 65535.0f, rcValues[RC_CH4]);
+        } catch (Exception e) {
+            Log.e(TAG, "Error in sendLeftJoystick", e);
+        }
     }
 
     public void sendRightJoystick(float x, float y) {
-        sendJoystickData(rcValues[RC_CH1] / 65535.0f, rcValues[RC_CH2] / 65535.0f, 
-                        normalizeToMavlink(y, -1.0f, 1.0f), x);
+        try {
+            sendJoystickData(rcValues[RC_CH1] / 65535.0f, rcValues[RC_CH2] / 65535.0f,
+                            normalizeToMavlink(y, -1.0f, 1.0f), x);
+        } catch (Exception e) {
+            Log.e(TAG, "Error in sendRightJoystick", e);
+        }
     }
 
     /**
