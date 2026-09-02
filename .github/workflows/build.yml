@@ -36,15 +36,14 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > pixelpilot.jks
+          echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > ${{ runner.temp }}/pixelpilot.jks
 
       - name: Build APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEYSTORE_PATH: ${{ github.workspace }}/pixelpilot.jks
         run: |
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=$KEYSTORE_PATH \
+            -Pandroid.injected.signing.store.file=${{ runner.temp }}/pixelpilot.jks \
             -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
             -Pandroid.injected.signing.key.alias=pixelpilot \
             -Pandroid.injected.signing.key.password=$KEYSTORE_PASSWORD
