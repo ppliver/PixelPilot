@@ -1,4 +1,4 @@
-package io.github.controlwear.virtual.joystick.android;
+package com.openipc.pixelpilot.joystick;
 
 import android.content.Context;
 import android.content.res.TypedArray;

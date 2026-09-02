@@ -60,7 +60,7 @@ import com.openipc.pixelpilot.osd.OSDElement;
 import com.openipc.pixelpilot.osd.OSDManager;
 import com.openipc.videonative.DecodingInfo;
 import com.openipc.videonative.IVideoParamsChanged;
-import io.github.controlwear.virtual.joystick.android.JoystickView;
+import com.openipc.pixelpilot.joystick.JoystickView;
 import com.openipc.videonative.VideoPlayer;
 // import com.openipc.wfbngrtl8812.WfbNGStats;  // 已禁用：wfbngrtl8812 模块已移除
 // import com.openipc.wfbngrtl8812.WfbNGStatsChanged;  // 已禁用：wfbngrtl8812 模块已移除
