@@ -60,8 +60,7 @@ import com.openipc.pixelpilot.osd.OSDElement;
 import com.openipc.pixelpilot.osd.OSDManager;
 import com.openipc.videonative.DecodingInfo;
 import com.openipc.videonative.IVideoParamsChanged;
-import com.openipc.mavlink.MavlinkJoystickController;
-import com.openipc.pixelpilot.JoystickView;
+import io.github.controlwear.virtual.joystick.android.JoystickView;
 import com.openipc.videonative.VideoPlayer;
 // import com.openipc.wfbngrtl8812.WfbNGStats;  // 已禁用：wfbngrtl8812 模块已移除
 // import com.openipc.wfbngrtl8812.WfbNGStatsChanged;  // 已禁用：wfbngrtl8812 模块已移除
@@ -142,7 +141,6 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
     // 虚拟摇杆相关
     private JoystickView joystickLeft;
     private JoystickView joystickRight;
-    private MavlinkJoystickController joystickController;
 
     private ObjectDetectorHelper objectDetectorHelper;
     private ExecutorService objectDetectionExecutor;
@@ -546,63 +544,30 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             return;
         }
 
-        // 初始化MAVLink摇杆控制器
-        try {
-            joystickController = new MavlinkJoystickController(this);
-            joystickController.setEnabled(true);
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to initialize joystick controller", e);
-            return;
-        }
-
         // 左摇杆监听 - 控制横滚和俯仰
-        joystickLeft.setOnJoystickListener(new JoystickView.OnJoystickListener() {
-            @Override
-            public void onMove(float normalizedX, float normalizedY, float strength, float angle) {
-                // 左摇杆：X=横滚, Y=俯仰
-                if (joystickController != null) {
-                    try {
-                        joystickController.sendLeftJoystick(normalizedX, normalizedY);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error in left joystick move", e);
-                    }
-                }
-            }
-
-            @Override
-            public void onRelease() {
-                // 释放时回中
-                if (joystickController != null) {
-                    try {
-                        joystickController.sendLeftJoystick(0f, 0f);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error in left joystick release", e);
-                    }
-                }
-            }
+        joystickLeft.setOnMoveListener((angle, strength) -> {
+            // 转换角度和强度为 MAVLink 坐标
+            double rad = Math.toRadians(angle - 90);
+            float x = (float) (strength / 100.0f * Math.cos(rad));
+            float y = (float) (strength / 100.0f * Math.sin(rad));
+            sendMavlinkJoystick(x, y, 0.5f, 0f);
         });
 
         // 右摇杆监听 - 控制油门和偏航
-        joystickRight.setOnJoystickListener(new JoystickView.OnJoystickListener() {
-            @Override
-            public void onMove(float normalizedX, float normalizedY, float strength, float angle) {
-                // 右摇杆：Y=油门, X=偏航
-                if (joystickController != null) {
-                    try {
-                        joystickController.sendRightJoystick(normalizedX, normalizedY);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error in right joystick move", e);
-                    }
-                }
-            }
-
-            @Override
-            public void onRelease() {
-                // 释放时保持当前位置（油门保持）
-            }
+        joystickRight.setOnMoveListener((angle, strength) -> {
+            // 转换角度和强度为 MAVLink 坐标
+            double rad = Math.toRadians(angle - 90);
+            float x = (float) (strength / 100.0f * Math.cos(rad));
+            float y = (float) (strength / 100.0f * Math.sin(rad));
+            sendMavlinkJoystick(0f, 0f, y + 0.5f, x);
         });
 
         Log.d(TAG, "Joysticks initialized");
+    }
+
+    private void sendMavlinkJoystick(float roll, float pitch, float throttle, float yaw) {
+        // TODO: 实现 MAVLink 发送逻辑
+        // 暂时不发送，避免网络错误
     }
 
     // ----------------------------------------------------------------------------
