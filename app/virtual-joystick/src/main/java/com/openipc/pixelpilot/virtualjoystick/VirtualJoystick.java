@@ -526,6 +526,6 @@ public class VirtualJoystick extends View {
     public int[] getPwmValues() { return mPwmValues.clone(); }
     public boolean isLocked() { return mLocked; }
     public float getOpacity() { return mOpacity; }
-    public int getX() { return (int)mCenterX; }
-    public int getY() { return (int)mCenterY; }
+    public int getCenterX() { return (int)mCenterX; }
+    public int getCenterY() { return (int)mCenterY; }
 }
