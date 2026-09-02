@@ -554,6 +554,41 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         joystickRight.setLocked(true);
         joystickRight.setOpacity(0.8f);
 
+        // 查找控制面板控件
+        SeekBar opacitySlider = findViewById(R.id.opacitySlider);
+        CheckBox lockCheckbox = findViewById(R.id.lockCheckbox);
+        CheckBox stickyCheckbox = findViewById(R.id.stickyCheckbox);
+
+        // 透明度滑块
+        if (opacitySlider != null) {
+            opacitySlider.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                    float opacity = progress / 100f;
+                    joystickLeft.setOpacity(opacity);
+                    joystickRight.setOpacity(opacity);
+                }
+                @Override public void onStartTrackingTouch(android.widget.SeekBar seekBar) {}
+                @Override public void onStopTrackingTouch(android.widget.SeekBar seekBar) {}
+            });
+        }
+
+        // 锁定位置复选框
+        if (lockCheckbox != null) {
+            lockCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                joystickLeft.setLocked(isChecked);
+                joystickRight.setLocked(isChecked);
+            });
+        }
+
+        // 粘性油门复选框
+        if (stickyCheckbox != null) {
+            stickyCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                joystickLeft.setStickyY(isChecked);
+                joystickRight.setStickyY(isChecked);
+            });
+        }
+
         // 左摇杆监听 - 控制横滚和俯仰
         joystickLeft.setOnMoveListener((pwmX, pwmY) -> {
             try {
