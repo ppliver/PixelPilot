@@ -27,12 +27,20 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Install Android SDK
+      - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Accept Android Licenses
         run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager --licenses --sdk_root=${ANDROID_HOME} <<< y >/dev/null 2>&1 || true
+
+      - name: Install required SDK components
+        run: |
+          sdkmanager "platforms;android-34" \
+                     "build-tools;35.0.0" \
+                     "ndk;26.1.10909125" \
+                     --sdk_root=${ANDROID_HOME}
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
 
       - name: Decode Keystore
         run: |
@@ -41,7 +49,9 @@ jobs:
       - name: Build APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
         run: |
+          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file=${{ runner.temp }}/pixelpilot.jks \
             -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
