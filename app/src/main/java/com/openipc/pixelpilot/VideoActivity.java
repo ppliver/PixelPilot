@@ -615,15 +615,13 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         Button channelConfigBtn = findViewById(R.id.channelConfigBtn);
         if (channelConfigBtn != null) {
             channelConfigBtn.setOnClickListener(v -> {
-                ChannelConfigDialog dialog = ChannelConfigDialog.newInstance(
-                    new ChannelConfigDialog.ChannelConfig[]{
-                        new ChannelConfigDialog.ChannelConfig(1, "转向"),
-                        new ChannelConfigDialog.ChannelConfig(2, "俯仰"),
-                        new ChannelConfigDialog.ChannelConfig(3, "油门"),
-                        new ChannelConfigDialog.ChannelConfig(4, "航向")
-                    },
-                    new ChannelConfigDialog.AppSettings()
-                );
+                ChannelConfigDialog.ChannelConfig[] channels = new ChannelConfigDialog.ChannelConfig[4];
+                channels[0] = new ChannelConfigDialog.ChannelConfig(); channels[0].id = 1; channels[0].name = "转向";
+                channels[1] = new ChannelConfigDialog.ChannelConfig(); channels[1].id = 2; channels[1].name = "俯仰";
+                channels[2] = new ChannelConfigDialog.ChannelConfig(); channels[2].id = 3; channels[2].name = "油门";
+                channels[3] = new ChannelConfigDialog.ChannelConfig(); channels[3].id = 4; channels[3].name = "航向";
+                ChannelConfigDialog.AppSettings settings = new ChannelConfigDialog.AppSettings();
+                ChannelConfigDialog dialog = ChannelConfigDialog.newInstance(channels, settings);
                 dialog.show(getSupportFragmentManager(), "channel_config");
             });
         }
