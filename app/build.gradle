@@ -4,7 +4,8 @@ plugins {
 
 android {
     namespace = "com.openipc.pixelpilot"
-    compileSdk = 34
+    compileSdk 34
+    compileSdkVersion 34
 
     defaultConfig {
         applicationId = "com.openipc.pixelpilot"
