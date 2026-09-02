@@ -50,72 +50,36 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-        debug {
-            signingConfig signingConfigs.release
+            minifyEnabled = true
+            shrinkResources = true
+            signingConfig = signingConfigs.release
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),'proguard-rules.pro'
         }
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     buildFeatures {
-        viewBinding true
+        viewBinding = true
     }
-
-    aaptOptions {
-        noCompress "tflite"
+    packaging {
+        jniLibs {
+            excludes += ["lib/armeabi-v7a/libmediapipe_tasks_vision_jni.so"]
+            useLegacyPackaging = true
+        }
     }
+    buildToolsVersion '35.0.0'
+    ndkVersion '26.1.10909125'
 }
 
 dependencies {
     implementation(project(":app:mavlink"))
     implementation(project(":app:videonative"))
-    // wfbngrtl8812 module disabled - missing zfex.c and Hal8812PhyReg.h
-    // implementation(project(":app:wfbngrtl8812"))
-
-    // AndroidX
     implementation(libs.appcompat)
     implementation(libs.material)
-    implementation(libs.constraintlayout)
-    implementation(libs.lifecycle.viewmodel.android)
-    implementation(libs.preference.ktx)
-    implementation(libs.recyclerview)
-    implementation(libs.core.ktx)
-    implementation(libs.navigation.fragment.ktx)
-    implementation(libs.navigation.ui.ktx)
-
-    // Video
-    implementation(libs.exoplayer)
-    implementation(libs.exoplayer.hls)
-    implementation(libs.exoplayer.dash)
-    implementation(libs.videoview)
-
-    // Network
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.gson)
-    implementation(libs.okhttp.logging)
-
-    // Image loading
-    implementation(libs.glide)
-
-    // MAVLink
-    implementation(libs.mavlink)
-
-    // Utils
-    implementation(libs.gson)
-    implementation(libs.moshi)
-    implementation(libs.moshi.adapters)
-
-    // Testing
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.espresso.core)
-    androidTestImplementation(libs.junit.ext.runner)
-    androidTestImplementation(libs.junit.ext.rules)
-    androidTestImplementation(libs.espresso.intents)
+    implementation(libs.philjay.mpandroidchart)
+    implementation(libs.mediapipe.tasks.vision)
 }
