@@ -75,8 +75,6 @@ android {
 dependencies {
     implementation(project(":app:mavlink"))
     implementation(project(":app:videonative"))
-    # implementation(project(":app:wfbngrtl8812"))  // 已禁用：wfbngrtl8812 模块不完整
-
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.philjay.mpandroidchart)
