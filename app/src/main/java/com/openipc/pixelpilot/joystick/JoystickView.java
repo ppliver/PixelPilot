@@ -140,8 +140,8 @@ public class JoystickView extends View {
         
         // 更新外部位置
         if (mContainerX == 0 && mContainerY == 0) {
-            mContainerX = getX();
-            mContainerY = getY();
+            mContainerX = (int)getX();
+            mContainerY = (int)getY();
         }
     }
 
