@@ -4,6 +4,7 @@ import android.app.Dialog;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -62,6 +63,12 @@ public class ChannelConfigDialog {
         View contentView = LayoutInflater.from(mContext).inflate(R.layout.dialog_channel_config, null);
         dialog.setContentView(contentView);
         dialog.setTitle("通道配置");
+        
+        // 设置Dialog窗口大小
+        android.view.WindowManager.LayoutParams params = dialog.getWindow().getAttributes();
+        params.width = (int)(mContext.getResources().getDisplayMetrics().widthPixels * 0.9);
+        params.height = (int)(mContext.getResources().getDisplayMetrics().heightPixels * 0.8);
+        dialog.getWindow().setAttributes(params);
         
         bindChannelViews(contentView);
         bindGlobalSettings(contentView);
