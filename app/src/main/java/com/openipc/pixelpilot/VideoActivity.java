@@ -541,9 +541,19 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         joystickLeft = findViewById(R.id.joystick_left);
         joystickRight = findViewById(R.id.joystick_right);
 
+        if (joystickLeft == null || joystickRight == null) {
+            Log.w(TAG, "Joystick views not found, skipping setup");
+            return;
+        }
+
         // 初始化MAVLink摇杆控制器
-        joystickController = new MavlinkJoystickController(this);
-        joystickController.setEnabled(true);
+        try {
+            joystickController = new MavlinkJoystickController(this);
+            joystickController.setEnabled(true);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to initialize joystick controller", e);
+            return;
+        }
 
         // 左摇杆监听 - 控制横滚和俯仰
         joystickLeft.setOnJoystickListener(new JoystickView.OnJoystickListener() {
