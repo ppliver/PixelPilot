@@ -615,13 +615,13 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         Button channelConfigBtn = findViewById(R.id.channelConfigBtn);
         if (channelConfigBtn != null) {
             channelConfigBtn.setOnClickListener(v -> {
-                ChannelConfigDialog.ChannelConfig[] channels = new ChannelConfigDialog.ChannelConfig[4];
-                channels[0] = new ChannelConfigDialog.ChannelConfig(); channels[0].id = 1; channels[0].name = "转向";
-                channels[1] = new ChannelConfigDialog.ChannelConfig(); channels[1].id = 2; channels[1].name = "俯仰";
-                channels[2] = new ChannelConfigDialog.ChannelConfig(); channels[2].id = 3; channels[2].name = "油门";
-                channels[3] = new ChannelConfigDialog.ChannelConfig(); channels[3].id = 4; channels[3].name = "航向";
-                ChannelConfigDialog.AppSettings settings = new ChannelConfigDialog.AppSettings();
-                ChannelConfigDialog dialog = ChannelConfigDialog.newInstance(channels, settings);
+                ChannelConfigDialog.ChannelConfig[] chs = new ChannelConfigDialog.ChannelConfig[4];
+                chs[0] = new ChannelConfigDialog.ChannelConfig(); chs[0].id = 1; chs[0].name = "转向";
+                chs[1] = new ChannelConfigDialog.ChannelConfig(); chs[1].id = 2; chs[1].name = "俯仰";
+                chs[2] = new ChannelConfigDialog.ChannelConfig(); chs[2].id = 3; chs[2].name = "油门";
+                chs[3] = new ChannelConfigDialog.ChannelConfig(); chs[3].id = 4; chs[3].name = "航向";
+                ChannelConfigDialog.AppSettings stg = new ChannelConfigDialog.AppSettings();
+                ChannelConfigDialog dialog = ChannelConfigDialog.newInstance(chs, stg);
                 dialog.show(getSupportFragmentManager(), "channel_config");
             });
         }
