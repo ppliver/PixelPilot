@@ -8,6 +8,7 @@ import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 
 /**
  * 虚拟摇杆控件 - 支持拖拽位置、显示PWM值
