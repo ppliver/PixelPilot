@@ -27,18 +27,20 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Decode Keystore
+      - name: Create Debug Keystore if Needed
         run: |
-          # Try to decode the keystore, handle empty/invalid case
-          if [ -n "${{ secrets.ANDROID_KEYSTORE }}" ]; then
-            echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > ${{ runner.temp }}/pixelpilot.jks
-            # Verify it's a valid JKS file
-            if ! file ${{ runner.temp }}/pixelpilot.jks | grep -q "Java KeyStore\|keytool\|data"; then
-              echo "Invalid keystore format, will build unsigned"
-              rm ${{ runner.temp }}/pixelpilot.jks
-            fi
-          else
-            echo "No keystore provided, will build unsigned"
+          KEYSTORE_PATH="${{ runner.temp }}/debug.keystore"
+          if [ ! -f "$KEYSTORE_PATH" ]; then
+            echo "Creating debug keystore..."
+            keytool -genkeypair -v \
+              -dname "CN=Android Debug,O=Android,C=US" \
+              -keystore "$KEYSTORE_PATH" \
+              -storepass android \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -alias androiddebugkey
           fi
 
       - name: Accept Android SDK Licenses & Install NDK
@@ -56,17 +58,21 @@ jobs:
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
-          # Check if keystore exists and is valid
-          if [ -f "${{ runner.temp }}/pixelpilot.jks" ]; then
-            echo "Building with signed keystore..."
+          # Check if valid keystore is provided
+          if [ -n "${{ secrets.ANDROID_KEYSTORE }}" ] && [ -f "${{ runner.temp }}/pixelpilot.jks" ]; then
+            echo "Building with provided keystore..."
             ./gradlew assembleRelease \
               -Pandroid.injected.signing.store.file=${{ runner.temp }}/pixelpilot.jks \
               -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
               -Pandroid.injected.signing.key.alias=pixelpilot \
               -Pandroid.injected.signing.key.password=$KEYSTORE_PASSWORD
           else
-            echo "Building unsigned APK (no valid keystore)..."
-            ./gradlew assembleRelease
+            echo "Building with debug keystore..."
+            ./gradlew assembleRelease \
+              -Pandroid.injected.signing.store.file=${{ runner.temp }}/debug.keystore \
+              -Pandroid.injected.signing.store.password=android \
+              -Pandroid.injected.signing.key.alias=androiddebugkey \
+              -Pandroid.injected.signing.key.password=android
           fi
 
       - name: List APK Output
