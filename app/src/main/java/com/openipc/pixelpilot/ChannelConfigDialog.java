@@ -1,4 +1,4 @@
-package com.openipc.pixelpilot.virtualjoystick;
+package com.openipc.pixelpilot;
 
 import android.app.Dialog;
 import android.content.Context;
@@ -16,6 +16,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
 
+import java.io.Serializable;
+
 /**
  * 通道配置对话框
  */
@@ -26,7 +28,7 @@ public class ChannelConfigDialog extends DialogFragment {
         void onSettingsChanged(AppSettings settings);
     }
 
-    public static class ChannelConfig {
+    public static class ChannelConfig implements Serializable {
         public int id;
         public String name;
         public int min = 1000;
@@ -35,7 +37,7 @@ public class ChannelConfigDialog extends DialogFragment {
         public boolean invert = false;
     }
 
-    public static class AppSettings {
+    public static class AppSettings implements Serializable {
         public boolean throttleSticky = false;
         public int mode = 2;
     }
