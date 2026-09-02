@@ -48,6 +48,7 @@ import androidx.core.content.FileProvider;
 import androidx.documentfile.provider.DocumentFile;
 
 import com.github.mikephil.charting.charts.PieChart;
+import com.openipc.pixelpilot.virtualjoystick.VirtualJoystick;
 import com.github.mikephil.charting.data.PieData;
 import com.github.mikephil.charting.data.PieDataSet;
 import com.github.mikephil.charting.data.PieEntry;
@@ -139,8 +140,8 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
     // WfbNgLink wfbLink;  // 已禁用：wfbngrtl8812 模块已移除
 
     // 虚拟摇杆相关
-    private JoystickView joystickLeft;
-    private JoystickView joystickRight;
+    private VirtualJoystick joystickLeft;
+    private VirtualJoystick joystickRight;
 
     private ObjectDetectorHelper objectDetectorHelper;
     private ExecutorService objectDetectionExecutor;
@@ -545,11 +546,13 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         }
 
         // 设置摇杆外观
-        joystickLeft.setChannelLabel(1);
+        joystickLeft.setChannel(1);
         joystickLeft.setLocked(true);
+        joystickLeft.setOpacity(0.8f);
 
-        joystickRight.setChannelLabel(2);
+        joystickRight.setChannel(2);
         joystickRight.setLocked(true);
+        joystickRight.setOpacity(0.8f);
 
         // 左摇杆监听 - 控制横滚和俯仰
         joystickLeft.setOnMoveListener((pwmX, pwmY) -> {

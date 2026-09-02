@@ -78,6 +78,7 @@ android {
 dependencies {
     implementation(project(":app:mavlink"))
     implementation(project(":app:videonative"))
+    implementation(project(":app:virtual-joystick"))
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.philjay.mpandroidchart)
