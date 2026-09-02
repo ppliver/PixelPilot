@@ -22,20 +22,20 @@ android {
 
     signingConfigs {
         create("release") {
-            def storeFile = findProperty("android.injected.signing.store.file")?.toString()
-            if (storeFile != null && file(storeFile).exists()) {
-                this.storeFile = file(storeFile)
-                this.storePassword = findProperty("android.injected.signing.store.password")?.toString() ?: System.getenv("KEYSTORE_PASSWORD") ?: "release"
-                this.keyAlias = findProperty("android.injected.signing.key.alias")?.toString() ?: "pixelpilot"
-                this.keyPassword = findProperty("android.injected.signing.key.password")?.toString() ?: System.getenv("KEYSTORE_PASSWORD") ?: "release"
+            def injectedStoreFile = findProperty("android.injected.signing.store.file")?.toString()
+            if (injectedStoreFile != null && file(injectedStoreFile).exists()) {
+                storeFile file(injectedStoreFile)
+                storePassword findProperty("android.injected.signing.store.password")?.toString() ?: System.getenv("KEYSTORE_PASSWORD") ?: "release"
+                keyAlias findProperty("android.injected.signing.key.alias")?.toString() ?: "pixelpilot"
+                keyPassword findProperty("android.injected.signing.key.password")?.toString() ?: System.getenv("KEYSTORE_PASSWORD") ?: "release"
             } else {
                 // 本地开发回退：使用根目录 fpv.jks（如果存在）
                 def fallback = file("${rootProject.projectDir.parentFile}/fpv.jks")
                 if (fallback.exists()) {
-                    this.storeFile = fallback
-                    this.storePassword = "release"
-                    this.keyAlias = "fpv"
-                    this.keyPassword = "release"
+                    storeFile fallback
+                    storePassword "release"
+                    keyAlias "fpv"
+                    keyPassword "release"
                 }
             }
         }
