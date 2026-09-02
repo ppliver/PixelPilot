@@ -36,6 +36,7 @@ import android.view.WindowManager;
 import android.webkit.HttpAuthHandler;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.TextView;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.PopupMenu;
@@ -571,8 +572,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
 
         // 查找控制面板控件
         SeekBar opacitySlider = findViewById(R.id.opacitySlider);
-        CheckBox lockCheckbox = findViewById(R.id.lockCheckbox);
-        CheckBox stickyCheckbox = findViewById(R.id.stickyCheckbox);
+        Button lockButton = findViewById(R.id.lockButton);
 
         // 透明度滑块
         if (opacitySlider != null) {
@@ -582,25 +582,39 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
                     float opacity = progress / 100f;
                     joystickLeft.setOpacity(opacity);
                     joystickRight.setOpacity(opacity);
+
+                    // 更新百分比显示
+                    TextView opacityValue = findViewById(R.id.opacityValue);
+                    if (opacityValue != null) {
+                        opacityValue.setText(progress + "%");
+                    }
                 }
                 @Override public void onStartTrackingTouch(android.widget.SeekBar seekBar) {}
                 @Override public void onStopTrackingTouch(android.widget.SeekBar seekBar) {}
             });
         }
 
-        // 锁定位置复选框
-        if (lockCheckbox != null) {
-            lockCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                joystickLeft.setLocked(isChecked);
-                joystickRight.setLocked(isChecked);
+        // 锁定按钮（切换锁定/解锁状态）
+        if (lockButton != null) {
+            boolean locked = true;
+            lockButton.setOnClickListener(v -> {
+                locked = !locked;
+                lockButton.setText(locked ? "🔒锁定" : "🔓解锁");
+                lockButton.setBackgroundColor(locked ? 0x800066CC : 0x80660000);
+                joystickLeft.setLocked(locked);
+                joystickRight.setLocked(locked);
             });
         }
 
-        // 粘性油门复选框
-        if (stickyCheckbox != null) {
-            stickyCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                joystickLeft.setThrottleSticky(isChecked);
-                joystickRight.setThrottleSticky(isChecked);
+        // 粘性油门按钮
+        Button stickyButton = findViewById(R.id.stickyButton);
+        if (stickyButton != null) {
+            boolean sticky = false;
+            stickyButton.setOnClickListener(v -> {
+                sticky = !sticky;
+                stickyButton.setBackgroundColor(sticky ? 0x800066CC : 0x80666666);
+                joystickLeft.setThrottleSticky(sticky);
+                joystickRight.setThrottleSticky(sticky);
             });
         }
 

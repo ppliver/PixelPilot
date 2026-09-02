@@ -737,19 +737,20 @@
         </com.openipc.pixelpilot.osd.MovableLayout>
     </FrameLayout>
 
-    <!-- 虚拟摇杆控制面板 - 横屏右上角，固定宽度200dp -->
+    <!-- 虚拟摇杆控制面板 - 横屏右上角，参考图布局 -->
     <LinearLayout
         android:id="@+id/joystickControls"
-        android:layout_width="200dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="#AA000000"
         android:padding="8dp"
-        android:layout_marginEnd="10dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginEnd="15dp"
+        android:layout_marginTop="15dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- 标题行 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -759,78 +760,89 @@
             android:layout_gravity="center"
             android:layout_marginBottom="6dp" />
 
-        <!-- 透明度控制行 -->
+        <!-- 第一行：透明度控制 -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp">
+
+            <!-- 眼睛图标模拟 -->
+            <TextView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:text="👁"
+                android:textSize="16sp"
+                android:gravity="center"
+                android:layout_marginEnd="4dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="透明度:"
-                android:textColor="#AAAAAA"
+                android:text="悬浮透明度:"
+                android:textColor="#FFAA00"
                 android:textSize="11sp"
                 android:layout_marginEnd="6dp" />
 
             <SeekBar
                 android:id="@+id/opacitySlider"
-                android:layout_width="0dp"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:max="100"
                 android:progress="80"
                 android:minWidth="80dp" />
 
             <TextView
                 android:id="@+id/opacityValue"
-                android:layout_width="30dp"
+                android:layout_width="32dp"
                 android:layout_height="wrap_content"
                 android:text="80%"
                 android:textColor="#FFFFFF"
-                android:textSize="10sp"
-                android:gravity="end"
+                android:textSize="11sp"
+                android:gravity="center"
                 android:layout_marginStart="4dp" />
         </LinearLayout>
 
-        <!-- 复选框行 -->
+        <!-- 第二行：功能按钮 -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="6dp">
+            android:layout_marginTop="4dp">
 
-            <CheckBox
-                android:id="@+id/lockCheckbox"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="锁定"
+            <!-- 锁定按钮 -->
+            <Button
+                android:id="@+id/lockButton"
+                android:layout_width="70dp"
+                android:layout_height="32dp"
+                android:text="🔒锁定"
+                android:textSize="10sp"
+                android:background="#800066CC"
                 android:textColor="#FFFFFF"
-                android:textSize="11sp"
-                android:checked="true" />
+                android:layout_marginEnd="4dp" />
 
-            <CheckBox
-                android:id="@+id/stickyCheckbox"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
+            <!-- 粘性油门按钮 -->
+            <Button
+                android:id="@+id/stickyButton"
+                android:layout_width="70dp"
+                android:layout_height="32dp"
                 android:text="粘性油门"
+                android:textSize="10sp"
+                android:background="#80666666"
                 android:textColor="#FFFFFF"
-                android:textSize="11sp" />
-        </LinearLayout>
+                android:layout_marginEnd="4dp" />
 
-        <!-- 通道配置按钮 -->
-        <Button
-            android:id="@+id/channelConfigBtn"
-            android:layout_width="match_parent"
-            android:layout_height="32dp"
-            android:layout_marginTop="8dp"
-            android:text="通道配置"
-            android:textSize="12sp"
-            android:background="#80000000"
-            android:textColor="#FFFFFF" />
+            <!-- 通道配置按钮 -->
+            <Button
+                android:id="@+id/channelConfigBtn"
+                android:layout_width="70dp"
+                android:layout_height="32dp"
+                android:text="⚙配置"
+                android:textSize="10sp"
+                android:background="#800066CC"
+                android:textColor="#FFFFFF" />
+        </LinearLayout>
 
     </LinearLayout>
 
