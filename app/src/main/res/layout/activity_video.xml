@@ -737,16 +737,16 @@
         </com.openipc.pixelpilot.osd.MovableLayout>
     </FrameLayout>
 
-    <!-- 虚拟摇杆控制面板 -->
+    <!-- 虚拟摇杆控制面板 - 横屏右上角，固定宽度200dp -->
     <LinearLayout
         android:id="@+id/joystickControls"
-        android:layout_width="wrap_content"
+        android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="#AA000000"
-        android:padding="10dp"
+        android:padding="8dp"
         android:layout_marginEnd="10dp"
-        android:layout_marginTop="60dp"
+        android:layout_marginTop="10dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -754,22 +754,25 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="摇杆设置"
-            android:textColor="@android:color/white"
+            android:textColor="#FFFFFF"
             android:textSize="12sp"
-            android:layout_gravity="center" />
+            android:layout_gravity="center"
+            android:layout_marginBottom="6dp" />
 
+        <!-- 透明度控制行 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="5dp">
+            android:gravity="center_vertical">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="透明度"
-                android:textColor="#AAA"
-                android:textSize="11sp" />
+                android:text="透明度:"
+                android:textColor="#AAAAAA"
+                android:textSize="11sp"
+                android:layout_marginEnd="6dp" />
 
             <SeekBar
                 android:id="@+id/opacitySlider"
@@ -778,35 +781,56 @@
                 android:layout_weight="1"
                 android:max="100"
                 android:progress="80"
-                android:layout_marginStart="5dp" />
+                android:minWidth="80dp" />
+
+            <TextView
+                android:id="@+id/opacityValue"
+                android:layout_width="30dp"
+                android:layout_height="wrap_content"
+                android:text="80%"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
+                android:gravity="end"
+                android:layout_marginStart="4dp" />
         </LinearLayout>
 
-        <CheckBox
-            android:id="@+id/lockCheckbox"
+        <!-- 复选框行 -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="锁定位置"
-            android:textColor="@android:color/white"
-            android:textSize="12sp"
-            android:checked="true" />
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp">
 
-        <CheckBox
-            android:id="@+id/stickyCheckbox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="粘性油门"
-            android:textColor="@android:color/white"
-            android:textSize="12sp" />
+            <CheckBox
+                android:id="@+id/lockCheckbox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="锁定"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:checked="true" />
 
+            <CheckBox
+                android:id="@+id/stickyCheckbox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="粘性油门"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- 通道配置按钮 -->
         <Button
             android:id="@+id/channelConfigBtn"
             android:layout_width="match_parent"
-            android:layout_height="36dp"
+            android:layout_height="32dp"
             android:layout_marginTop="8dp"
             android:text="通道配置"
             android:textSize="12sp"
             android:background="#80000000"
-            android:textColor="@android:color/white" />
+            android:textColor="#FFFFFF" />
 
     </LinearLayout>
 
