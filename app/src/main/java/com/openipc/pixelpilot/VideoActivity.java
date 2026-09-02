@@ -545,32 +545,34 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         }
 
         // 设置摇杆外观
-        joystickLeft.setButtonColor(Color.parseColor("#AAFFFFFF"));
-        joystickLeft.setBorderColor(Color.parseColor("#55FFFFFF"));
-        joystickLeft.setBorderAlpha(85);
-        joystickLeft.setBackgroundColor(Color.parseColor("#33000000"));
+        joystickLeft.setChannelLabel(1);
+        joystickLeft.setLocked(true);
+        joystickLeft.setPosition(30, getHeight() - 220);
 
-        joystickRight.setButtonColor(Color.parseColor("#AAFFFFFF"));
-        joystickRight.setBorderColor(Color.parseColor("#55FFFFFF"));
-        joystickRight.setBorderAlpha(85);
-        joystickRight.setBackgroundColor(Color.parseColor("#33000000"));
+        joystickRight.setChannelLabel(2);
+        joystickRight.setLocked(true);
+        joystickRight.setPosition(getWidth() - 210, getHeight() - 220);
 
         // 左摇杆监听 - 控制横滚和俯仰
-        joystickLeft.setOnMoveListener((angle, strength) -> {
-            // 转换角度和强度为 MAVLink 坐标
-            double rad = Math.toRadians(angle - 90);
-            float x = (float) (strength / 100.0f * Math.cos(rad));
-            float y = (float) (strength / 100.0f * Math.sin(rad));
-            sendMavlinkJoystick(x, y, 0.5f, 0f);
+        joystickLeft.setOnMoveListener((pwmX, pwmY) -> {
+            try {
+                float x = (pwmX - 1500) / 500f;
+                float y = (pwmY - 1500) / 500f;
+                sendMavlinkJoystick(x, y, 0.5f, 0f);
+            } catch (Exception e) {
+                Log.e(TAG, "Joystick left error: " + e.getMessage());
+            }
         });
 
         // 右摇杆监听 - 控制油门和偏航
-        joystickRight.setOnMoveListener((angle, strength) -> {
-            // 转换角度和强度为 MAVLink 坐标
-            double rad = Math.toRadians(angle - 90);
-            float x = (float) (strength / 100.0f * Math.cos(rad));
-            float y = (float) (strength / 100.0f * Math.sin(rad));
-            sendMavlinkJoystick(0f, 0f, y + 0.5f, x);
+        joystickRight.setOnMoveListener((pwmX, pwmY) -> {
+            try {
+                float throttle = (pwmY - 1500) / 500f + 0.5f;
+                float yaw = (pwmX - 1500) / 500f;
+                sendMavlinkJoystick(0f, 0f, throttle, yaw);
+            } catch (Exception e) {
+                Log.e(TAG, "Joystick right error: " + e.getMessage());
+            }
         });
 
         Log.d(TAG, "Joysticks initialized");
