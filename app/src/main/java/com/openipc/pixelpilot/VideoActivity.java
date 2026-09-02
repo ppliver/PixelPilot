@@ -595,26 +595,26 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         }
 
         // 锁定按钮（切换锁定/解锁状态）
+        final boolean[] lockedState = {true};
         if (lockButton != null) {
-            boolean locked = true;
             lockButton.setOnClickListener(v -> {
-                locked = !locked;
-                lockButton.setText(locked ? "锁定" : "解锁");
-                lockButton.setBackgroundColor(locked ? 0x800066CC : 0x80660000);
-                joystickLeft.setLocked(locked);
-                joystickRight.setLocked(locked);
+                lockedState[0] = !lockedState[0];
+                lockButton.setText(lockedState[0] ? "锁定" : "解锁");
+                lockButton.setBackgroundColor(lockedState[0] ? 0x800066CC : 0x80660000);
+                joystickLeft.setLocked(lockedState[0]);
+                joystickRight.setLocked(lockedState[0]);
             });
         }
 
         // 粘性油门按钮
+        final boolean[] stickyState = {false};
         Button stickyButton = findViewById(R.id.stickyButton);
         if (stickyButton != null) {
-            boolean sticky = false;
             stickyButton.setOnClickListener(v -> {
-                sticky = !sticky;
-                stickyButton.setBackgroundColor(sticky ? 0x800066CC : 0x80666666);
-                joystickLeft.setThrottleSticky(sticky);
-                joystickRight.setThrottleSticky(sticky);
+                stickyState[0] = !stickyState[0];
+                stickyButton.setBackgroundColor(stickyState[0] ? 0x800066CC : 0x80666666);
+                joystickLeft.setThrottleSticky(stickyState[0]);
+                joystickRight.setThrottleSticky(stickyState[0]);
             });
         }
 
