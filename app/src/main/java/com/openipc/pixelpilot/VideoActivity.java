@@ -546,14 +546,27 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             return;
         }
 
-        // 设置摇杆外观
-        joystickLeft.setChannel(1);
+        // 设置摇杆外观和配置
+        VirtualJoystick.ChannelConfig[] channels = new VirtualJoystick.ChannelConfig[] {
+            new VirtualJoystick.ChannelConfig(1, "转向"),
+            new VirtualJoystick.ChannelConfig(2, "俯仰"),
+            new VirtualJoystick.ChannelConfig(3, "油门"),
+            new VirtualJoystick.ChannelConfig(4, "航向")
+        };
+        joystickLeft.setChannelConfig(channels);
         joystickLeft.setLocked(true);
         joystickLeft.setOpacity(0.8f);
 
-        joystickRight.setChannel(2);
+        joystickRight.setChannelConfig(channels);
         joystickRight.setLocked(true);
         joystickRight.setOpacity(0.8f);
+
+        VirtualJoystick.AppSettings settings = new VirtualJoystick.AppSettings();
+        settings.throttleSticky = false;
+        settings.autoCenterX = true;
+        settings.mode = 2;
+        joystickLeft.setSettings(settings);
+        joystickRight.setSettings(settings);
 
         // 查找控制面板控件
         SeekBar opacitySlider = findViewById(R.id.opacitySlider);
@@ -585,32 +598,35 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         // 粘性油门复选框
         if (stickyCheckbox != null) {
             stickyCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                joystickLeft.setStickyY(isChecked);
-                joystickRight.setStickyY(isChecked);
+                joystickLeft.setThrottleSticky(isChecked);
+                joystickRight.setThrottleSticky(isChecked);
             });
         }
 
-        // 左摇杆监听 - 控制横滚和俯仰
-        joystickLeft.setOnMoveListener((pwmX, pwmY) -> {
-            try {
-                float x = (pwmX - 1500) / 500f;
-                float y = (pwmY - 1500) / 500f;
-                sendMavlinkJoystick(x, y, 0.5f, 0f);
-            } catch (Exception e) {
-                Log.e(TAG, "Joystick left error: " + e.getMessage());
-            }
+        // PWM 值监听
+        joystickLeft.setOnChannelsChangedListener(pwmValues -> {
+            Log.d(TAG, "Left joystick PWM: " + pwmValues[0] + "," + pwmValues[1] + "," + pwmValues[2] + "," + pwmValues[3]);
+        });
+        joystickRight.setOnChannelsChangedListener(pwmValues -> {
+            Log.d(TAG, "Right joystick PWM: " + pwmValues[0] + "," + pwmValues[1] + "," + pwmValues[2] + "," + pwmValues[3]);
         });
 
-        // 右摇杆监听 - 控制油门和偏航
-        joystickRight.setOnMoveListener((pwmX, pwmY) -> {
-            try {
-                float throttle = (pwmY - 1500) / 500f + 0.5f;
-                float yaw = (pwmX - 1500) / 500f;
-                sendMavlinkJoystick(0f, 0f, throttle, yaw);
-            } catch (Exception e) {
-                Log.e(TAG, "Joystick right error: " + e.getMessage());
-            }
-        });
+        // 通道配置按钮
+        Button channelConfigBtn = findViewById(R.id.channelConfigBtn);
+        if (channelConfigBtn != null) {
+            channelConfigBtn.setOnClickListener(v -> {
+                ChannelConfigDialog dialog = ChannelConfigDialog.newInstance(
+                    new ChannelConfigDialog.ChannelConfig[]{
+                        new ChannelConfigDialog.ChannelConfig(1, "转向"),
+                        new ChannelConfigDialog.ChannelConfig(2, "俯仰"),
+                        new ChannelConfigDialog.ChannelConfig(3, "油门"),
+                        new ChannelConfigDialog.ChannelConfig(4, "航向")
+                    },
+                    new ChannelConfigDialog.AppSettings()
+                );
+                dialog.show(getSupportFragmentManager(), "channel_config");
+            });
+        }
 
         Log.d(TAG, "Joysticks initialized");
     }

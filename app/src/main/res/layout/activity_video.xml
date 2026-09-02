@@ -798,6 +798,16 @@
             android:textColor="@android:color/white"
             android:textSize="12sp" />
 
+        <Button
+            android:id="@+id/channelConfigBtn"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:layout_marginTop="8dp"
+            android:text="通道配置"
+            android:textSize="12sp"
+            android:background="#80000000"
+            android:textColor="@android:color/white" />
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
