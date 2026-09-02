@@ -547,11 +547,9 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
         // 设置摇杆外观
         joystickLeft.setChannelLabel(1);
         joystickLeft.setLocked(true);
-        joystickLeft.setPosition(30, getHeight() - 220);
 
         joystickRight.setChannelLabel(2);
         joystickRight.setLocked(true);
-        joystickRight.setPosition(getWidth() - 210, getHeight() - 220);
 
         // 左摇杆监听 - 控制横滚和俯仰
         joystickLeft.setOnMoveListener((pwmX, pwmY) -> {

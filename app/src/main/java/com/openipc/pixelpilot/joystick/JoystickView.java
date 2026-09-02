@@ -226,10 +226,10 @@ public class JoystickView extends View {
                 float dy = event.getY() - mDownY;
                 
                 if (isDraggingContainer && !mLocked) {
-                    mContainerX = Math.max(0, Math.min(getWidth() - mContainerSize, mStartContainerX + dx));
-                    mContainerY = Math.max(0, Math.min(getHeight() - mContainerSize, mStartContainerY + dy));
-                    setX(mContainerX);
-                    setY(mContainerY);
+                    mContainerX = Math.max(0, Math.min(getWidth() - mContainerSize, (int)mStartContainerX + (int)dx));
+                    mContainerY = Math.max(0, Math.min(getHeight() - mContainerSize, (int)mStartContainerY + (int)dy));
+                    setX((float)mContainerX);
+                    setY((float)mContainerY);
                 } else if (isDraggingStick) {
                     float stickDx = mStartStickOffsetX + dx;
                     float stickDy = mStartStickOffsetY + dy;
@@ -332,9 +332,12 @@ public class JoystickView extends View {
 
     public void setSize(int size) {
         mContainerSize = size;
-        layoutParams.width = size;
-        layoutParams.height = size;
-        requestLayout();
+        ViewGroup.LayoutParams lp = getLayoutParams();
+        if (lp != null) {
+            lp.width = size;
+            lp.height = size;
+            requestLayout();
+        }
     }
 
     public int getSize() {
