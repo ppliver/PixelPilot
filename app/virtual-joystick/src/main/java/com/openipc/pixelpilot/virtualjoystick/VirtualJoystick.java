@@ -169,7 +169,8 @@ public class VirtualJoystick extends View {
         // 应用透明度
         int bgAlpha = (int)(255 * mOpacity);
         mPaintBackground.setAlpha(bgAlpha);
-        mPaintBorder.setAlpha((int)(mBorderColor & 0xFF * mOpacity));
+        int borderAlpha = (int)((mBorderColor >> 24) * mOpacity);
+        mPaintBorder.setAlpha(borderAlpha);
         
         // 绘制半透明背景
         canvas.drawCircle(mCenterX, mCenterY, mBorderRadius, mPaintBackground);
