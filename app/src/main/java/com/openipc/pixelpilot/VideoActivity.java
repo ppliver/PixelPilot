@@ -544,6 +544,17 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             return;
         }
 
+        // 设置摇杆外观
+        joystickLeft.setButtonColor(Color.parseColor("#AAFFFFFF"));
+        joystickLeft.setBorderColor(Color.parseColor("#55FFFFFF"));
+        joystickLeft.setBorderAlpha(85);
+        joystickLeft.setBackgroundColor(Color.parseColor("#33000000"));
+
+        joystickRight.setButtonColor(Color.parseColor("#AAFFFFFF"));
+        joystickRight.setBorderColor(Color.parseColor("#55FFFFFF"));
+        joystickRight.setBorderAlpha(85);
+        joystickRight.setBackgroundColor(Color.parseColor("#33000000"));
+
         // 左摇杆监听 - 控制横滚和俯仰
         joystickLeft.setOnMoveListener((angle, strength) -> {
             // 转换角度和强度为 MAVLink 坐标

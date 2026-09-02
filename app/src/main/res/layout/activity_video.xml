@@ -109,25 +109,17 @@
         android:id="@+id/joystick_left"
         android:layout_width="150dp"
         android:layout_height="150dp"
-        android:alpha="0.7"
         android:layout_margin="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:JV_buttonColor="#AAFFFFFF"
-        app:JV_borderColor="#55FFFFFF"
-        app:JV_backgroundColor="#33000000" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <com.openipc.pixelpilot.joystick.JoystickView
         android:id="@+id/joystick_right"
         android:layout_width="150dp"
         android:layout_height="150dp"
-        android:alpha="0.7"
         android:layout_margin="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:JV_buttonColor="#AAFFFFFF"
-        app:JV_borderColor="#55FFFFFF"
-        app:JV_backgroundColor="#33000000" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <FrameLayout
         android:id="@+id/osdLayout"
