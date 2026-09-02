@@ -2,7 +2,6 @@ package com.openipc.pixelpilot;
 
 import android.app.Dialog;
 import android.content.Context;
-import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -14,7 +13,7 @@ import android.widget.TextView;
 import java.io.Serializable;
 
 /**
- * 通道配置对话框
+ * 通道配置对话框 - 2x2网格布局
  */
 public class ChannelConfigDialog {
 
@@ -80,11 +79,13 @@ public class ChannelConfigDialog {
             int chId = i + 1;
             ChannelConfig ch = i < mChannels.length ? mChannels[i] : new ChannelConfig(chId, "CH" + chId);
             
+            // 标签
             TextView label = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_label", "id", mContext.getPackageName()));
             if (label != null) {
                 label.setText("CH" + chId + " " + ch.name);
             }
             
+            // 反向开关
             CheckBox invert = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_invert", "id", mContext.getPackageName()));
             if (invert != null) {
                 invert.setChecked(ch.invert);
@@ -94,6 +95,7 @@ public class ChannelConfigDialog {
                 });
             }
             
+            // 微调滑块
             SeekBar trim = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_trim", "id", mContext.getPackageName()));
             TextView trimText = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_trim_text", "id", mContext.getPackageName()));
             if (trim != null && trimText != null) {
@@ -112,6 +114,7 @@ public class ChannelConfigDialog {
                 });
             }
             
+            // 限高限低
             EditText minEdit = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_min", "id", mContext.getPackageName()));
             EditText maxEdit = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_max", "id", mContext.getPackageName()));
             if (minEdit != null) {

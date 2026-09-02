@@ -4,26 +4,17 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="#CC1E1E1E"
-    android:padding="16dp">
+    android:padding="12dp">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="车载控制参数与网络设定"
         android:textColor="#FFFFFF"
-        android:textSize="18sp"
+        android:textSize="16sp"
         android:textStyle="bold"
         android:gravity="center"
         android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="支持 UDP 目标地址与端口号自定义、通道微调及透明图传流配置"
-        android:textColor="#AAAAAA"
-        android:textSize="12sp"
-        android:gravity="center"
-        android:layout_marginBottom="16dp" />
 
     <!-- CH1 -->
     <LinearLayout
@@ -31,7 +22,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="#2A2A2A"
-        android:padding="12dp"
+        android:padding="10dp"
         android:layout_marginBottom="8dp">
 
         <LinearLayout
@@ -159,7 +150,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="#2A2A2A"
-        android:padding="12dp"
+        android:padding="10dp"
         android:layout_marginBottom="8dp">
 
         <LinearLayout
@@ -287,7 +278,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="#2A2A2A"
-        android:padding="12dp"
+        android:padding="10dp"
         android:layout_marginBottom="8dp">
 
         <LinearLayout
@@ -415,8 +406,8 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="#2A2A2A"
-        android:padding="12dp"
-        android:layout_marginBottom="12dp">
+        android:padding="10dp"
+        android:layout_marginBottom="8dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -543,9 +534,8 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:background="#2A2A2A"
-        android:padding="12dp"
-        android:layout_marginBottom="12dp"
-        android:gravity="center_vertical">
+        android:padding="10dp"
+        android:layout_marginBottom="8dp">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -606,18 +596,17 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="取消"
-            android:layout_marginEnd="8dp"
-            android:backgroundTint="#444444"
-            android:textColor="#FFFFFF" />
+            android:textColor="#FFFFFF"
+            android:textSize="12sp" />
 
         <Button
             android:id="@+id/save_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="保存"
-            android:backgroundTint="#00D4FF"
-            android:textColor="#000000"
-            android:textStyle="bold" />
+            android:textColor="#00D4FF"
+            android:textSize="12sp"
+            android:layout_marginStart="8dp" />
     </LinearLayout>
 
 </LinearLayout>

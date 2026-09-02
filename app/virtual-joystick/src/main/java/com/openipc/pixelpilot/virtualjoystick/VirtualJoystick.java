@@ -70,7 +70,7 @@ public class VirtualJoystick extends View {
 
     // 状态
     private State mState = State.LOCKED;
-    private boolean mLocked = false;
+    private boolean mLocked = true;  // 默认锁定
     private boolean mThrottleSticky = false;
     private boolean mShowAdjustButtons = false;
     private boolean mIsDragging = false;
@@ -109,7 +109,11 @@ public class VirtualJoystick extends View {
     private ScaleGestureDetector mScaleDetector;
     private float mLastTouchX, mLastTouchY;
     private long mDragStartTime = 0;
-    private static final long DRAG_THRESHOLD_MS = 300;  // 长按300ms进入拖拽模式
+    private static final long DRAG_THRESHOLD_MS = 200;  // 长按200ms进入拖拽模式
+
+    // 拖拽偏移
+    private float mDragOffsetX, mDragOffsetY;
+    private boolean mIsDraggingContainer = false;
 
     public VirtualJoystick(@NonNull Context context) {
         super(context);
@@ -176,7 +180,7 @@ public class VirtualJoystick extends View {
         mScaleDetector = new ScaleGestureDetector(context, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
             @Override
             public boolean onScale(@NonNull ScaleGestureDetector detector) {
-                if (!mLocked && !mIsDragging) {
+                if (!mLocked && !mIsDraggingContainer) {
                     float factor = detector.getScaleFactor();
                     adjustSize(factor * mDiameter);
                     return true;
@@ -184,27 +188,18 @@ public class VirtualJoystick extends View {
                 return false;
             }
         });
-
+        
         updateLayout();
-    }
-
-    private void updateLayout() {
-        int w = getWidth();
-        int h = getHeight();
-        if (w > 0 && h > 0) {
-            mCenterX = w / 2f;
-            mCenterY = h / 2f;
-            mRadius = mDiameter / 2f;
-            mInnerRadius = mRadius * 0.35f;
-        }
     }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         // 居中
-        mCenterX = w / 2f;
-        mCenterY = h / 2f;
+        if (mCenterX == 0) {
+            mCenterX = w / 2f;
+            mCenterY = h / 2f;
+        }
         mRadius = mDiameter / 2f;
         mInnerRadius = mRadius * 0.35f;
     }
@@ -218,16 +213,17 @@ public class VirtualJoystick extends View {
         float r = mRadius;
         float stickRadius = mInnerRadius;
         
-        // 计算摇杆头位置
-        float normX = mStickX / r;
-        float normY = mStickY / r;
+        // 计算摇杆头位置（最大行程 = radius * 0.7）
+        float maxTravel = r * 0.7f;
+        float normX = mStickX / maxTravel;
+        float normY = mStickY / maxTravel;
         float dist = (float)Math.sqrt(normX*normX + normY*normY);
         if (dist > 1.0f) {
             normX /= dist;
             normY /= dist;
         }
-        float stickX = cx + normX * r;
-        float stickY = cy + normY * r;
+        float stickX = cx + normX * maxTravel;
+        float stickY = cy + normY * maxTravel;
         
         // 绘制外圆边框
         mBorderPaint.setAlpha((int)(0.9f * 255 * mOpacity));
@@ -290,8 +286,8 @@ public class VirtualJoystick extends View {
         canvas.drawText("CH4", cx - r - 20f, cy + 6f, mChLabelPaint);
         canvas.drawText("CH2", cx + r + 20f, cy + 6f, mChLabelPaint);
         
-        // 绘制调整按钮
-        if (mShowAdjustButtons && mState == State.DRAGGING && !mLocked) {
+        // 绘制调整按钮（解锁状态下）
+        if (mShowAdjustButtons && !mLocked) {
             drawAdjustButtons(canvas, cx, cy, r);
             // 绘制提示文字
             mChLabelPaint.setAlpha((int)(0.6f * 255 * mOpacity));
@@ -329,33 +325,51 @@ public class VirtualJoystick extends View {
                 mLastTouchX = x;
                 mLastTouchY = y;
                 mDragStartTime = System.currentTimeMillis();
-                mIsDragging = false;
+                mIsDraggingContainer = false;
+                
+                // 检查是否点击了调整按钮
+                if (!mLocked && mShowAdjustButtons) {
+                    float r = mRadius;
+                    float btnX1 = mCenterX - r - mButtonSize / 2f;
+                    float btnX2 = mCenterX + r + mButtonSize / 2f;
+                    float btnY = mCenterY;
+                    
+                    if (Math.abs(x - btnX1) < mButtonSize / 2f && Math.abs(y - btnY) < mButtonSize / 2f) {
+                        adjustSize(mDiameter * 0.9f);
+                        return true;
+                    }
+                    if (Math.abs(x - btnX2) < mButtonSize / 2f && Math.abs(y - btnY) < mButtonSize / 2f) {
+                        adjustSize(mDiameter * 1.1f);
+                        return true;
+                    }
+                }
                 break;
                 
             case MotionEvent.ACTION_MOVE:
-                // 检查是否长时间按住（进入拖拽位置模式）
-                if (mState == State.LOCKED && !mLocked) {
+                if (!mLocked) {
+                    // 检查是否长时间按住（进入拖拽容器模式）
                     long pressDuration = System.currentTimeMillis() - mDragStartTime;
                     if (pressDuration > DRAG_THRESHOLD_MS) {
-                        enterDraggingState();
+                        mIsDraggingContainer = true;
                     }
-                }
-                
-                if (mState == State.DRAGGING && mIsDragging) {
-                    float dx = x - mLastTouchX;
-                    float dy = y - mLastTouchY;
                     
-                    // 移动摇杆位置
-                    mCenterX += dx;
-                    mCenterY += dy;
-                    
-                    // 边界限制
-                    mCenterX = Math.max(mRadius, Math.min(getWidth() - mRadius, mCenterX));
-                    mCenterY = Math.max(mRadius, Math.min(getHeight() - mRadius, mCenterY));
-                    
-                    invalidate();
-                } else if (mState == State.LOCKED) {
-                    // 正常摇杆操作
+                    if (mIsDraggingContainer) {
+                        float dx = x - mLastTouchX;
+                        float dy = y - mLastTouchY;
+                        
+                        mCenterX += dx;
+                        mCenterY += dy;
+                        
+                        // 边界限制
+                        mCenterX = Math.max(mRadius, Math.min(getWidth() - mRadius, mCenterX));
+                        mCenterY = Math.max(mRadius, Math.min(getHeight() - mRadius, mCenterY));
+                        
+                        invalidate();
+                    } else {
+                        // 正常摇杆操作
+                        handleStickMovement(x, y);
+                    }
+                } else {
                     handleStickMovement(x, y);
                 }
                 mLastTouchX = x;
@@ -364,9 +378,10 @@ public class VirtualJoystick extends View {
                 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                if (mState == State.LOCKED) {
+                if (mLocked || !mIsDraggingContainer) {
                     resetStick();
                 }
+                mIsDraggingContainer = false;
                 break;
         }
         
@@ -374,14 +389,15 @@ public class VirtualJoystick extends View {
     }
 
     private void handleStickMovement(float touchX, float touchY) {
+        float maxTravel = mRadius * 0.7f;
         float dx = touchX - mCenterX;
         float dy = touchY - mCenterY;
         
-        // 限制在圆内
+        // 限制在范围内
         float dist = (float)Math.sqrt(dx*dx + dy*dy);
-        if (dist > mRadius) {
-            dx = dx * mRadius / dist;
-            dy = dy * mRadius / dist;
+        if (dist > maxTravel) {
+            dx = dx * maxTravel / dist;
+            dy = dy * maxTravel / dist;
         }
         
         mStickX = dx;
@@ -436,16 +452,14 @@ public class VirtualJoystick extends View {
 
     private void enterDraggingState() {
         if (!mLocked) {
-            mState = State.DRAGGING;
             mShowAdjustButtons = true;
             invalidate();
         }
     }
 
-    public void exitDraggingState() {
-        mState = State.LOCKED;
+    private void exitDraggingState() {
         mShowAdjustButtons = false;
-        mIsDragging = false;
+        mIsDraggingContainer = false;
         invalidate();
     }
 
@@ -471,6 +485,8 @@ public class VirtualJoystick extends View {
         this.mLocked = locked;
         if (locked) {
             exitDraggingState();
+        } else {
+            enterDraggingState();
         }
     }
 
@@ -510,4 +526,6 @@ public class VirtualJoystick extends View {
     public int[] getPwmValues() { return mPwmValues.clone(); }
     public boolean isLocked() { return mLocked; }
     public float getOpacity() { return mOpacity; }
+    public int getX() { return (int)mCenterX; }
+    public int getY() { return (int)mCenterY; }
 }
