@@ -105,7 +105,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <io.github.controlwear.virtual.joystick.android.JoystickView
+    <com.openipc.pixelpilot.joystick.JoystickView
         android:id="@+id/joystick_left"
         android:layout_width="150dp"
         android:layout_height="150dp"
@@ -117,7 +117,7 @@
         app:JV_borderColor="#55FFFFFF"
         app:JV_backgroundColor="#33000000" />
 
-    <io.github.controlwear.virtual.joystick.android.JoystickView
+    <com.openipc.pixelpilot.joystick.JoystickView
         android:id="@+id/joystick_right"
         android:layout_width="150dp"
         android:layout_height="150dp"
