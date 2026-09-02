@@ -5,23 +5,18 @@ import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.DialogFragment;
-
 import java.io.Serializable;
 
 /**
  * 通道配置对话框
  */
-public class ChannelConfigDialog extends DialogFragment {
+public class ChannelConfigDialog {
 
     public interface OnChannelConfigChanged {
         void onChannelConfigChanged(int channelId, ChannelConfig config);
@@ -35,6 +30,16 @@ public class ChannelConfigDialog extends DialogFragment {
         public int max = 2000;
         public int trim = 0;
         public boolean invert = false;
+        
+        public ChannelConfig() {
+            this.id = 0;
+            this.name = "CH";
+        }
+        
+        public ChannelConfig(int id, String name) {
+            this.id = id;
+            this.name = name;
+        }
     }
 
     public static class AppSettings implements Serializable {
@@ -42,70 +47,45 @@ public class ChannelConfigDialog extends DialogFragment {
         public int mode = 2;
     }
 
-    private static final String ARG_CHANNELS = "channels";
-    private static final String ARG_SETTINGS = "settings";
-
-    private ChannelConfig[] mChannels;
-    private AppSettings mSettings;
+    private final Context mContext;
+    private final ChannelConfig[] mChannels;
+    private final AppSettings mSettings;
     private OnChannelConfigChanged mListener;
 
-    public static ChannelConfigDialog newInstance(ChannelConfig[] channels, AppSettings settings) {
-        ChannelConfigDialog dialog = new ChannelConfigDialog();
-        Bundle args = new Bundle();
-        args.putSerializable(ARG_CHANNELS, channels);
-        args.putSerializable(ARG_SETTINGS, settings);
-        dialog.setArguments(args);
+    public ChannelConfigDialog(Context context, ChannelConfig[] channels, AppSettings settings) {
+        mContext = context;
+        mChannels = channels != null ? channels : new ChannelConfig[0];
+        mSettings = settings != null ? settings : new AppSettings();
+    }
+
+    public Dialog createDialog() {
+        Dialog dialog = new Dialog(mContext, android.R.style.Theme_DeviceDefault_Dialog_Alert);
+        View contentView = LayoutInflater.from(mContext).inflate(R.layout.dialog_channel_config, null);
+        dialog.setContentView(contentView);
+        dialog.setTitle("通道配置");
+        
+        bindChannelViews(contentView);
+        bindGlobalSettings(contentView);
+        
+        Button cancelButton = contentView.findViewById(R.id.cancel_button);
+        if (cancelButton != null) {
+            cancelButton.setOnClickListener(v -> dialog.dismiss());
+        }
+        
         return dialog;
-    }
-
-    @NonNull
-    @Override
-    public Dialog onCreateDialog(Bundle savedInstanceState) {
-        return new Dialog(requireContext(), android.R.style.Theme_DeviceDefault_Dialog_Alert);
-    }
-
-    @Nullable
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.dialog_channel_config, container, false);
-    }
-
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        
-        mChannels = (ChannelConfig[]) getArguments().getSerializable(ARG_CHANNELS);
-        mSettings = (AppSettings) getArguments().getSerializable(ARG_SETTINGS);
-        
-        if (mChannels == null) {
-            mChannels = new ChannelConfig[4];
-            String[] names = {"转向", "俯仰", "油门", "航向"};
-            for (int i = 0; i < 4; i++) {
-                mChannels[i] = new ChannelConfig();
-                mChannels[i].id = i + 1;
-                mChannels[i].name = names[i];
-            }
-        }
-        
-        if (mSettings == null) {
-            mSettings = new AppSettings();
-        }
-        
-        bindChannelViews(view);
-        bindGlobalSettings(view);
     }
 
     private void bindChannelViews(View view) {
         for (int i = 0; i < 4; i++) {
             int chId = i + 1;
-            ChannelConfig ch = mChannels[i];
+            ChannelConfig ch = i < mChannels.length ? mChannels[i] : new ChannelConfig(chId, "CH" + chId);
             
-            TextView label = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_label", "id", getContext().getPackageName()));
+            TextView label = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_label", "id", mContext.getPackageName()));
             if (label != null) {
                 label.setText("CH" + chId + " " + ch.name);
             }
             
-            CheckBox invert = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_invert", "id", getContext().getPackageName()));
+            CheckBox invert = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_invert", "id", mContext.getPackageName()));
             if (invert != null) {
                 invert.setChecked(ch.invert);
                 invert.setOnCheckedChangeListener((btn, checked) -> {
@@ -114,8 +94,8 @@ public class ChannelConfigDialog extends DialogFragment {
                 });
             }
             
-            SeekBar trim = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_trim", "id", getContext().getPackageName()));
-            TextView trimText = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_trim_text", "id", getContext().getPackageName()));
+            SeekBar trim = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_trim", "id", mContext.getPackageName()));
+            TextView trimText = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_trim_text", "id", mContext.getPackageName()));
             if (trim != null && trimText != null) {
                 trim.setProgress(ch.trim + 200);
                 trimText.setText(formatTrim(ch.trim));
@@ -132,8 +112,8 @@ public class ChannelConfigDialog extends DialogFragment {
                 });
             }
             
-            EditText minEdit = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_min", "id", getContext().getPackageName()));
-            EditText maxEdit = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_max", "id", getContext().getPackageName()));
+            EditText minEdit = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_min", "id", mContext.getPackageName()));
+            EditText maxEdit = view.findViewById(view.getResources().getIdentifier("ch" + chId + "_max", "id", mContext.getPackageName()));
             if (minEdit != null) {
                 minEdit.setText(String.valueOf(ch.min));
                 minEdit.addTextChangedListener(new android.text.TextWatcher() {
@@ -158,16 +138,7 @@ public class ChannelConfigDialog extends DialogFragment {
     }
 
     private void bindGlobalSettings(View view) {
-        CheckBox stickyCheck = view.findViewById(view.getResources().getIdentifier("throttle_sticky_check", "id", getContext().getPackageName()));
-        if (stickyCheck != null) {
-            stickyCheck.setChecked(mSettings.throttleSticky);
-            stickyCheck.setOnCheckedChangeListener((btn, checked) -> {
-                mSettings.throttleSticky = checked;
-                if (mListener != null) mListener.onSettingsChanged(mSettings);
-            });
-        }
-        
-        Button modeBtn = view.findViewById(view.getResources().getIdentifier("mode_button", "id", getContext().getPackageName()));
+        Button modeBtn = view.findViewById(R.id.mode_button);
         if (modeBtn != null) {
             modeBtn.setText("模式: Mode " + mSettings.mode);
             modeBtn.setOnClickListener(v -> {
@@ -176,12 +147,6 @@ public class ChannelConfigDialog extends DialogFragment {
                 if (mListener != null) mListener.onSettingsChanged(mSettings);
             });
         }
-        
-        Button saveBtn = view.findViewById(view.getResources().getIdentifier("save_button", "id", getContext().getPackageName()));
-        Button cancelBtn = view.findViewById(view.getResources().getIdentifier("cancel_button", "id", getContext().getPackageName()));
-        
-        if (saveBtn != null) saveBtn.setOnClickListener(v -> dismiss());
-        if (cancelBtn != null) cancelBtn.setOnClickListener(v -> dismiss());
     }
 
     private String formatTrim(int trim) {
