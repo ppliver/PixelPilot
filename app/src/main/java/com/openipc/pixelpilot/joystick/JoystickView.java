@@ -140,22 +140,18 @@ public class JoystickView extends View {
         mBackgroundRadius = mBorderRadius;
         
         // 更新外部位置
+        if (mContainerSize == 0) {
+            mContainerSize = Math.min(w, h);
+        }
         if (mContainerX == 0 && mContainerY == 0) {
-            mContainerX = (int)getX();
-            mContainerY = (int)getY();
+            mContainerX = (int)getTranslationX();
+            mContainerY = (int)getTranslationY();
         }
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        
-        // 如果不在中心，先平移画布
-        float drawX = mContainerX + mCenterX;
-        float drawY = mContainerY + mCenterY;
-        
-        canvas.save();
-        canvas.translate(drawX - mCenterX, drawY - mCenterY);
         
         // 绘制半透明背景
         canvas.drawCircle(mCenterX, mCenterY, mBackgroundRadius, mPaintBackground);
@@ -171,7 +167,7 @@ public class JoystickView extends View {
         // 绘制外边框
         canvas.drawCircle(mCenterX, mCenterY, mBorderRadius, mPaintCircleBorder);
         
-        // 绘制摇杆按钮 (渐变效果)
+        // 绘制摇杆按钮
         canvas.drawCircle(mPosX, mPosY, mButtonRadius, mPaintCircleButton);
         canvas.drawCircle(mPosX, mPosY, mButtonRadius / 3, mPaintButtonCenter);
         
@@ -192,8 +188,6 @@ public class JoystickView extends View {
             hintPaint.setTextAlign(Paint.Align.CENTER);
             canvas.drawText("拖动调整", mCenterX, mCenterY + 8, hintPaint);
         }
-        
-        canvas.restore();
     }
 
     private float mDownX, mDownY;
@@ -229,8 +223,8 @@ public class JoystickView extends View {
                 if (isDraggingContainer && !mLocked) {
                     mContainerX = Math.max(0, Math.min(getWidth() - mContainerSize, (int)mStartContainerX + (int)dx));
                     mContainerY = Math.max(0, Math.min(getHeight() - mContainerSize, (int)mStartContainerY + (int)dy));
-                    setX((float)mContainerX);
-                    setY((float)mContainerY);
+                    setTranslationX((float)mContainerX);
+                    setTranslationY((float)mContainerY);
                 } else if (isDraggingStick) {
                     float stickDx = mStartStickOffsetX + dx;
                     float stickDy = mStartStickOffsetY + dy;
@@ -318,8 +312,8 @@ public class JoystickView extends View {
     public void setPosition(int x, int y) {
         mContainerX = x;
         mContainerY = y;
-        setX(x);
-        setY(y);
+        setTranslationX((float)x);
+        setTranslationY((float)y);
         invalidate();
     }
 
