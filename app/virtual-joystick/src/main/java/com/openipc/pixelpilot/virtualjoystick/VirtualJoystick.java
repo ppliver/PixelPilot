@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -15,9 +16,12 @@ import androidx.annotation.Nullable;
 import java.io.Serializable;
 
 /**
- * 悬浮虚拟摇杆控件 - 简化版
+ * 悬浮虚拟摇杆控件
  */
 public class VirtualJoystick extends View {
+
+    // 状态枚举
+    public enum State { LOCKED, DRAGGING }
 
     // 通道配置
     public static class ChannelConfig implements Serializable {
@@ -52,6 +56,7 @@ public class VirtualJoystick extends View {
     private static final int COLOR_CENTER_ICON = 0xFF00CED1;
     private static final int COLOR_PWM_TEXT = 0xFF00CED1;
     private static final int COLOR_CH_LABEL = 0xFFDDDDDD;
+    private static final int COLOR_ADJUST_BTN = 0x99333333;
 
     // 摇杆参数
     private float mRadius = 75f;
@@ -64,8 +69,17 @@ public class VirtualJoystick extends View {
     private float mOpacity = 0.85f;
 
     // 状态
+    private State mState = State.LOCKED;
     private boolean mLocked = false;
     private boolean mThrottleSticky = false;
+    private boolean mShowAdjustButtons = false;
+    private boolean mIsDragging = false;
+    private boolean mAutoCenterX = true;
+
+    // 布局参数
+    private float mMinDiameter = 120;
+    private float mMaxDiameter = 350;
+    private float mButtonSize = 40;
 
     // 通道配置
     private ChannelConfig[] mChannels = new ChannelConfig[] {
@@ -87,7 +101,15 @@ public class VirtualJoystick extends View {
     private Paint mCenterIconPaint;
     private Paint mPwmTextPaint;
     private Paint mChLabelPaint;
+    private Paint mAdjustBtnPaint;
+    private Paint mAdjustTextPaint;
     private Path mCenterIconPath;
+
+    // 缩放手势检测
+    private ScaleGestureDetector mScaleDetector;
+    private float mLastTouchX, mLastTouchY;
+    private long mDragStartTime = 0;
+    private static final long DRAG_THRESHOLD_MS = 300;  // 长按300ms进入拖拽模式
 
     public VirtualJoystick(@NonNull Context context) {
         super(context);
@@ -139,7 +161,31 @@ public class VirtualJoystick extends View {
         mChLabelPaint.setTextSize(22f);
         mChLabelPaint.setTextAlign(Paint.Align.CENTER);
         
+        mAdjustBtnPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mAdjustBtnPaint.setColor(COLOR_ADJUST_BTN);
+        mAdjustBtnPaint.setStyle(Paint.Style.FILL);
+        
+        mAdjustTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mAdjustTextPaint.setColor(Color.WHITE);
+        mAdjustTextPaint.setTextSize(28f);
+        mAdjustTextPaint.setTextAlign(Paint.Align.CENTER);
+        
         mCenterIconPath = new Path();
+        
+        // 缩放手势检测
+        mScaleDetector = new ScaleGestureDetector(context, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            @Override
+            public boolean onScale(@NonNull ScaleGestureDetector detector) {
+                if (!mLocked && !mIsDragging) {
+                    float factor = detector.getScaleFactor();
+                    adjustSize(factor * mDiameter);
+                    return true;
+                }
+                return false;
+            }
+        });
+        
+        updateLayout();
     }
 
     @Override
@@ -232,29 +278,91 @@ public class VirtualJoystick extends View {
         canvas.drawText("CH1", cx, cy + r + 25f, mChLabelPaint);
         canvas.drawText("CH4", cx - r - 20f, cy + 6f, mChLabelPaint);
         canvas.drawText("CH2", cx + r + 20f, cy + 6f, mChLabelPaint);
+        
+        // 绘制调整按钮
+        if (mShowAdjustButtons && mState == State.DRAGGING && !mLocked) {
+            drawAdjustButtons(canvas, cx, cy, r);
+            // 绘制提示文字
+            mChLabelPaint.setAlpha((int)(0.6f * 255 * mOpacity));
+            canvas.drawText("拖动调整", cx, cy + r + 55f, mChLabelPaint);
+        }
+    }
+
+    private void drawAdjustButtons(Canvas canvas, int cx, int cy, float r) {
+        // 左按钮（缩小）
+        float btnX1 = cx - r - mButtonSize / 2f;
+        float btnY = cy;
+        canvas.drawCircle(btnX1, btnY, mButtonSize / 2f, mAdjustBtnPaint);
+        canvas.drawText("-", btnX1, btnY + mButtonSize / 6f, mAdjustTextPaint);
+        
+        // 右按钮（放大）
+        float btnX2 = cx + r + mButtonSize / 2f;
+        canvas.drawCircle(btnX2, btnY, mButtonSize / 2f, mAdjustBtnPaint);
+        canvas.drawText("+", btnX2, btnY + mButtonSize / 6f, mAdjustTextPaint);
     }
 
     @Override
     public boolean onTouchEvent(@NonNull MotionEvent event) {
+        int action = event.getActionMasked();
+        
+        // 处理缩放手势
+        if (!mLocked) {
+            mScaleDetector.onTouchEvent(event);
+        }
+        
         float x = event.getX();
         float y = event.getY();
         
-        switch (event.getActionMasked()) {
+        switch (action) {
             case MotionEvent.ACTION_DOWN:
+                mLastTouchX = x;
+                mLastTouchY = y;
+                mDragStartTime = System.currentTimeMillis();
+                mIsDragging = false;
+                break;
+                
             case MotionEvent.ACTION_MOVE:
-                handleTouch(x, y);
-                return true;
+                // 检查是否长时间按住（进入拖拽位置模式）
+                if (mState == State.LOCKED && !mLocked) {
+                    long pressDuration = System.currentTimeMillis() - mDragStartTime;
+                    if (pressDuration > DRAG_THRESHOLD_MS) {
+                        enterDraggingState();
+                    }
+                }
+                
+                if (mState == State.DRAGGING && mIsDragging) {
+                    float dx = x - mLastTouchX;
+                    float dy = y - mLastTouchY;
+                    
+                    // 移动摇杆位置
+                    mCenterX += dx;
+                    mCenterY += dy;
+                    
+                    // 边界限制
+                    mCenterX = Math.max(mRadius, Math.min(getWidth() - mRadius, mCenterX));
+                    mCenterY = Math.max(mRadius, Math.min(getHeight() - mRadius, mCenterY));
+                    
+                    invalidate();
+                } else if (mState == State.LOCKED) {
+                    // 正常摇杆操作
+                    handleStickMovement(x, y);
+                }
+                mLastTouchX = x;
+                mLastTouchY = y;
+                break;
                 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                resetStick();
-                return true;
+                if (mState == State.LOCKED) {
+                    resetStick();
+                }
+                break;
         }
         
-        return super.onTouchEvent(event);
+        return true;
     }
 
-    private void handleTouch(float touchX, float touchY) {
+    private void handleStickMovement(float touchX, float touchY) {
         float dx = touchX - mCenterX;
         float dy = touchY - mCenterY;
         
@@ -273,7 +381,7 @@ public class VirtualJoystick extends View {
     }
 
     private void resetStick() {
-        if (mSettings.autoCenterX) {
+        if (mAutoCenterX) {
             mStickX = 0;
         }
         if (!mSettings.throttleSticky) {
@@ -307,6 +415,29 @@ public class VirtualJoystick extends View {
         }
     }
 
+    private void adjustSize(float newDiameter) {
+        newDiameter = Math.max(mMinDiameter, Math.min(mMaxDiameter, newDiameter));
+        mDiameter = (int)newDiameter;
+        mRadius = mDiameter / 2f;
+        mInnerRadius = mRadius * 0.35f;
+        invalidate();
+    }
+
+    private void enterDraggingState() {
+        if (!mLocked) {
+            mState = State.DRAGGING;
+            mShowAdjustButtons = true;
+            invalidate();
+        }
+    }
+
+    public void exitDraggingState() {
+        mState = State.LOCKED;
+        mShowAdjustButtons = false;
+        mIsDragging = false;
+        invalidate();
+    }
+
     // 公开 API
     public void setChannelConfig(ChannelConfig[] channels) {
         mChannels = channels;
@@ -314,6 +445,8 @@ public class VirtualJoystick extends View {
 
     public void setSettings(AppSettings settings) {
         mSettings = settings;
+        this.mThrottleSticky = settings.throttleSticky;
+        this.mAutoCenterX = settings.autoCenterX;
     }
 
     public void setOpacity(float opacity) {
@@ -325,6 +458,9 @@ public class VirtualJoystick extends View {
 
     public void setLocked(boolean locked) {
         this.mLocked = locked;
+        if (locked) {
+            exitDraggingState();
+        }
     }
 
     public void setThrottleSticky(boolean sticky) {
