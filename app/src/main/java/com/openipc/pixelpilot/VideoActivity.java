@@ -36,9 +36,10 @@ import android.view.WindowManager;
 import android.webkit.HttpAuthHandler;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.PopupMenu;
 import android.widget.SeekBar;
-import android.widget.CheckBox;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
