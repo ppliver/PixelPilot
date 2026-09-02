@@ -7,325 +7,428 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import java.io.Serializable;
 
 /**
- * 虚拟摇杆控件 - 参考 RC-Pilot Pro 样式
+ * 悬浮虚拟摇杆控件 - 参考 RC-Pilot Pro 风格
  */
 public class VirtualJoystick extends View {
 
-    public interface OnMoveListener {
-        void onMove(int pwmX, int pwmY);
-    }
+    // 摇杆状态
+    public enum State { LOCKED, DRAGGING }
 
-    private static final int STATE_DRAGGING_STICK = 1;
-    private static final int STATE_DRAGGING_CONTAINER = 2;
-    private static final int STATE_RESIZING = 3;
-
-    private Paint mPaintBackground;
-    private Paint mPaintBorder;
-    private Paint mPaintCrosshair;
-    private Paint mPaintButton;
-    private Paint mPaintText;
-    private Paint mPaintLabel;
-    private Paint mPaintHint;
-    private Paint mPaintArrow;
-
-    private int mSize;
-    private int mCenterX;
-    private int mCenterY;
-    private int mBorderRadius;
-    private int mButtonRadius;
-    private float mMaxTravel;
-
-    private float mStickX;
-    private float mStickY;
-    private float mOffsetX;
-    private float mOffsetY;
-
-    private int mActivePointerId = -1;
-    private int mTouchState = 0;
-    private float mDownX;
-    private float mDownY;
-    private float mStartOffsetX;
-    private float mStartOffsetY;
-    private float mStartStickX;
-    private float mStartStickY;
-    private int mStartSize;
-
-    private boolean mLocked = true;
-    private boolean mStickyY = false;
-    private int mChannel = 1;
-    private float mOpacity = 0.9f;
-
-    private int mCurrentPwmX = 1500;
-    private int mCurrentPwmY = 1500;
-
-    private OnMoveListener mListener;
-
-    public VirtualJoystick(Context context) {
-        super(context);
-        init();
-    }
-
-    public VirtualJoystick(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        init();
-    }
-
-    public VirtualJoystick(Context context, AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-        init();
-    }
-
-    private void init() {
-        setClickable(true);
+    // 通道配置（Serializable 用于跨进程传递）
+    public static class ChannelConfig implements Serializable {
+        public int id;
+        public String name;
+        public int min = 1000;
+        public int max = 2000;
+        public int trim = 0;
+        public boolean invert = false;
         
-        mPaintBackground = new Paint();
-        mPaintBackground.setColor(Color.parseColor("#CC1a1a1a"));
-        mPaintBackground.setAntiAlias(true);
+        public ChannelConfig() {
+            this.id = 0;
+            this.name = "CH";
+        }
         
-        mPaintBorder = new Paint();
-        mPaintBorder.setColor(Color.parseColor("#D4A574"));
-        mPaintBorder.setStyle(Paint.Style.STROKE);
-        mPaintBorder.setStrokeWidth(6);
-        mPaintBorder.setAntiAlias(true);
-        
-        mPaintCrosshair = new Paint();
-        mPaintCrosshair.setColor(Color.parseColor("#44FFFFFF"));
-        mPaintCrosshair.setStrokeWidth(2);
-        mPaintCrosshair.setAntiAlias(true);
-        
-        mPaintButton = new Paint();
-        mPaintButton.setColor(Color.parseColor("#00CCFF"));
-        mPaintButton.setAntiAlias(true);
-        mPaintButton.setAlpha(220);
-        
-        mPaintText = new Paint();
-        mPaintText.setColor(Color.parseColor("#00FFFF"));
-        mPaintText.setTextSize(26);
-        mPaintText.setAntiAlias(true);
-        mPaintText.setTextAlign(Paint.Align.CENTER);
-        
-        mPaintLabel = new Paint();
-        mPaintLabel.setColor(Color.parseColor("#AAAAAA"));
-        mPaintLabel.setTextSize(16);
-        mPaintLabel.setAntiAlias(true);
-        mPaintLabel.setTextAlign(Paint.Align.CENTER);
-        
-        mPaintHint = new Paint();
-        mPaintHint.setColor(Color.parseColor("#FFAA00"));
-        mPaintHint.setTextSize(22);
-        mPaintHint.setAntiAlias(true);
-        mPaintHint.setTextAlign(Paint.Align.CENTER);
-        
-        mPaintArrow = new Paint();
-        mPaintArrow.setColor(Color.parseColor("#FFD700"));
-        mPaintArrow.setAntiAlias(true);
-    }
-
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        
-        int width = MeasureSpec.getSize(widthMeasureSpec);
-        int height = MeasureSpec.getSize(heightMeasureSpec);
-        mSize = Math.min(width, height);
-        
-        setMeasuredDimension(mSize, mSize);
-    }
-
-    @Override
-    protected void onSizeChanged(int w, int h, int oldW, int oldH) {
-        super.onSizeChanged(w, h, oldW, oldH);
-        
-        mCenterX = w / 2;
-        mCenterY = h / 2;
-        mBorderRadius = Math.min(w, h) / 2 - 15;
-        mButtonRadius = mBorderRadius / 3;
-        mMaxTravel = mBorderRadius * 0.7f;
-        
-        resetStick();
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        
-        int bgAlpha = (int)(204 * mOpacity);
-        mPaintBackground.setAlpha(bgAlpha);
-        
-        // 绘制半透明背景
-        canvas.drawCircle(mCenterX, mCenterY, mBorderRadius, mPaintBackground);
-        
-        // 绘制十字准星
-        int crossStart = mBorderRadius / 4;
-        int crossEnd = mBorderRadius * 3 / 4;
-        canvas.drawLine(mCenterX - crossEnd, mCenterY, mCenterX - crossStart, mCenterY, mPaintCrosshair);
-        canvas.drawLine(mCenterX + crossStart, mCenterY, mCenterX + crossEnd, mCenterY, mPaintCrosshair);
-        canvas.drawLine(mCenterX, mCenterY - crossEnd, mCenterX, mCenterY - crossStart, mPaintCrosshair);
-        canvas.drawLine(mCenterX, mCenterY + crossStart, mCenterX, mCenterY + crossEnd, mPaintCrosshair);
-        
-        // 绘制外边框
-        canvas.drawCircle(mCenterX, mCenterY, mBorderRadius, mPaintBorder);
-        
-        // 绘制摇杆按钮
-        canvas.drawCircle(mCenterX + mStickX, mCenterY + mStickY, mButtonRadius, mPaintButton);
-        
-        // 绘制四向箭头指示器
-        drawArrow(canvas, mCenterX, mCenterY - mBorderRadius + 30, 0);
-        drawArrow(canvas, mCenterX, mCenterY + mBorderRadius - 30, 180);
-        drawArrow(canvas, mCenterX - mBorderRadius + 30, mCenterY, 270);
-        drawArrow(canvas, mCenterX + mBorderRadius - 30, mCenterY, 90);
-        
-        // 绘制通道标签
-        canvas.drawText("CH" + mChannel, mCenterX, mCenterY - mBorderRadius - 10, mPaintLabel);
-        
-        // 绘制 PWM 值
-        canvas.drawText(mCurrentPwmX + " | " + mCurrentPwmY, mCenterX, mCenterY + mBorderRadius + 30, mPaintText);
-        
-        // 解锁提示和调整按钮
-        if (!mLocked) {
-            canvas.drawText("拖动调整", mCenterX, mCenterY + 8, mPaintHint);
-            drawResizeButtons(canvas);
+        public ChannelConfig(int id, String name) {
+            this.id = id;
+            this.name = name;
         }
     }
 
-    private void drawArrow(Canvas canvas, float cx, float cy, float angle) {
-        Path path = new Path();
-        float size = 10;
-        path.moveTo(cx, cy - size);
-        path.lineTo(cx - size * 0.6f, cy + size * 0.5f);
-        path.lineTo(cx + size * 0.6f, cy + size * 0.5f);
-        path.close();
-        
-        android.graphics.Matrix matrix = new android.graphics.Matrix();
-        matrix.postRotate(angle, cx, cy);
-        path.transform(matrix);
-        
-        canvas.drawPath(path, mPaintArrow);
+    // 全局设置（Serializable）
+    public static class AppSettings implements Serializable {
+        public boolean throttleSticky = false;
+        public boolean autoCenterX = true;
+        public int mode = 2; // 1=Mode1, 2=Mode2
     }
 
-    private void drawResizeButtons(Canvas canvas) {
-        int btnY = mCenterY - mBorderRadius - 45;
-        int btnRadius = 18;
+    // 颜色常量
+    private static final int COLOR_RING_BORDER = 0xFFB87333;  // 金棕色
+    private static final int COLOR_RING_FILL = 0x66222222;   // 半透明深灰
+    private static final int COLOR_CROSSHAIR = 0x99FFFFFF;   // 半透明白色
+    private static final int COLOR_CENTER_ICON = 0xFF00CED1; // 青色
+    private static final int COLOR_PWM_TEXT = 0xFF00CED1;    // 青色
+    private static final int COLOR_CH_LABEL = 0xFFDDDDDD;   // 浅灰色
+    private static final int COLOR_ADJUST_BTN = 0x99333333; // 深色半透明
+    private static final int COLOR_ADJUST_TEXT = 0xFFFFFFFF; // 白色
+
+    // 摇杆参数
+    private float mRadius;           // 外圆半径
+    private float mInnerRadius;      // 内圆半径（摇杆头）
+    private float mStickX;           // 摇杆头 X（相对圆心）
+    private float mStickY;           // 摇杆头 Y（相对圆心）
+    private float mCenterX;          // 摇杆中心屏幕坐标
+    private float mCenterY;
+    private int mDiameter = 150;     // 默认直径（像素）
+    private float mOpacity = 0.85f;  // 透明度 0.0-1.0
+
+    // 状态
+    private State mState = State.LOCKED;
+    private boolean mLocked = false;   // 锁定位置
+    private boolean mThrottleSticky = false;
+    private boolean mShowAdjustButtons = false;  // 解锁时显示 +/- 按钮
+    private boolean mIsDragging = false;
+
+    // 布局参数
+    private float mMinDiameter = 120;
+    private float mMaxDiameter = 350;
+    private float mButtonSize = 40;  // 调整按钮尺寸
+
+    // 通道配置（Mode2: 左=CH4/CH3, 右=CH1/CH2）
+    private ChannelConfig[] mChannels = new ChannelConfig[] {
+        new ChannelConfig(1, "转向"),
+        new ChannelConfig(2, "俯仰"),
+        new ChannelConfig(3, "油门"),
+        new ChannelConfig(4, "航向")
+    };
+    private AppSettings mSettings = new AppSettings();
+
+    // PWM 值
+    private int[] mPwmValues = {1500, 1500, 1500, 1500};
+
+    // UI 引用
+    @Nullable
+    private Button mMinusBtn, mPlusBtn;
+    @Nullable
+    private TextView mTitleText;
+
+    // 画笔
+    private Paint mBorderPaint;
+    private Paint mFillPaint;
+    private Paint mCrosshairPaint;
+    private Paint mStickPaint;
+    private Paint mCenterIconPaint;
+    private Paint mPwmTextPaint;
+    private Paint mChLabelPaint;
+    private Paint mAdjustBtnPaint;
+    private Paint mAdjustTextPaint;
+    private Path mCenterIconPath;
+
+    // 拖拽检测
+    private ScaleGestureDetector mScaleDetector;
+    private float mLastTouchX, mLastTouchY;
+    private long mDragStartTime = 0;
+    private static final long DRAG_THRESHOLD_MS = 200;  // 长按 200ms 后进入拖拽模式
+    private static final float PINCH_THRESHOLD = 0.85f;  // 缩放手势阈值
+
+    public VirtualJoystick(@NonNull Context context) {
+        super(context);
+        init(context);
+    }
+
+    public VirtualJoystick(@NonNull Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+        init(context);
+    }
+
+    public VirtualJoystick(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        init(context);
+    }
+
+    private void init(Context context) {
+        setFocusableInTouchMode(true);
+        setFocusable(true);
         
-        Paint btnBg = new Paint();
-        btnBg.setColor(Color.parseColor("#CC1E3D59"));
-        btnBg.setAntiAlias(true);
+        // 初始化画笔
+        mBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mBorderPaint.setStyle(Paint.Style.STROKE);
+        mBorderPaint.setStrokeWidth(4f);
+        updatePaintColors(mOpacity);
         
-        Paint btnBorder = new Paint();
-        btnBorder.setColor(Color.parseColor("#FF6B9FFF"));
-        btnBorder.setStyle(Paint.Style.STROKE);
-        btnBorder.setStrokeWidth(2);
-        btnBorder.setAntiAlias(true);
+        mFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mFillPaint.setStyle(Paint.Style.FILL);
+        updatePaintColors(mOpacity);
         
-        Paint btnText = new Paint();
-        btnText.setColor(Color.WHITE);
-        btnText.setTextSize(20);
-        btnText.setAntiAlias(true);
-        btnText.setTextAlign(Paint.Align.CENTER);
-        btnText.setFakeBoldText(true);
+        mCrosshairPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mCrosshairPaint.setColor(Color.argb((int)(0.6f * 255), 255, 255, 255));
+        mCrosshairPaint.setStrokeWidth(2f);
         
-        // 缩小按钮
-        canvas.drawCircle(mCenterX - 30, btnY, btnRadius, btnBg);
-        canvas.drawCircle(mCenterX - 30, btnY, btnRadius, btnBorder);
-        canvas.drawText("-", mCenterX - 30, btnY + 7, btnText);
+        mStickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mStickPaint.setColor(Color.parseColor("#40FFFFFF"));
         
-        // 放大按钮
-        canvas.drawCircle(mCenterX + 30, btnY, btnRadius, btnBg);
-        canvas.drawCircle(mCenterX + 30, btnY, btnRadius, btnBorder);
-        canvas.drawText("+", mCenterX + 30, btnY + 7, btnText);
+        mCenterIconPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mCenterIconPaint.setColor(COLOR_CENTER_ICON);
+        mCenterIconPaint.setStyle(Paint.Style.FILL);
+        
+        mPwmTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mPwmTextPaint.setColor(COLOR_PWM_TEXT);
+        mPwmTextPaint.setTextSize(28f);
+        mPwmTextPaint.setTextAlign(Paint.Align.CENTER);
+        
+        mChLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mChLabelPaint.setColor(COLOR_CH_LABEL);
+        mChLabelPaint.setTextSize(22f);
+        mChLabelPaint.setTextAlign(Paint.Align.CENTER);
+        
+        mAdjustBtnPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mAdjustBtnPaint.setColor(COLOR_ADJUST_BTN);
+        mAdjustBtnPaint.setStyle(Paint.Style.FILL);
+        
+        mAdjustTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mAdjustTextPaint.setColor(COLOR_ADJUST_TEXT);
+        mAdjustTextPaint.setTextSize(28f);
+        mAdjustTextPaint.setTextAlign(Paint.Align.CENTER);
+        
+        mCenterIconPath = new Path();
+        
+        // 缩放手势检测
+        mScaleDetector = new ScaleGestureDetector(context, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            @Override
+            public boolean onScale(@NonNull ScaleGestureDetector detector) {
+                if (!mLocked && !mIsDragging) {
+                    float factor = detector.getScaleFactor();
+                    adjustSize(factor * mDiameter);
+                    return true;
+                }
+                return false;
+            }
+        });
+        
+        updateLayout();
+    }
+
+    private void updatePaintColors(float opacity) {
+        int alpha = (int)(opacity * 255);
+        int borderAlpha = (int)(0.9f * alpha);
+        
+        mBorderPaint.setColor(Color.argb(borderAlpha, 184, 115, 51)); // 金棕色
+        mFillPaint.setColor(Color.argb(alpha, 30, 30, 30)); // 深灰半透明
+    }
+
+    private void updateLayout() {
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) return;
+        
+        mRadius = mDiameter / 2f;
+        mInnerRadius = mRadius * 0.35f;
+        
+        // 居中布局
+        mCenterX = w / 2f;
+        mCenterY = h / 2f;
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        int action = event.getActionMasked();
-        int pointerIndex = (action & MotionEvent.ACTION_POINTER_INDEX_MASK) >> MotionEvent.ACTION_POINTER_INDEX_SHIFT;
-        int pointerId = event.getPointerId(pointerIndex);
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        updateLayout();
+        // 如果有按钮，重新定位
+        if (mMinusBtn != null && mPlusBtn != null) {
+            positionButtons();
+        }
+    }
 
+    @Override
+    protected void onDraw(@NonNull Canvas canvas) {
+        super.onDraw(canvas);
+        
+        drawJoystick(canvas);
+        
+        if (mShowAdjustButtons && mState == State.DRAGGING) {
+            drawAdjustButtons(canvas);
+        }
+        
+        drawPwmDisplay(canvas);
+        drawChannelLabels(canvas);
+        
+        if (mState == State.DRAGGING && !mLocked) {
+            drawDragHint(canvas);
+        }
+    }
+
+    private void drawJoystick(Canvas canvas) {
+        int cx = (int)mCenterX;
+        int cy = (int)mCenterY;
+        float r = mRadius;
+        float stickRadius = mInnerRadius;
+        
+        // 计算摇杆头位置
+        float normX = mStickX / r;
+        float normY = mStickY / r;
+        float len = Math.min(1.0f, (float)Math.sqrt(normX*normX + normY*normY));
+        float stickX = cx + normX * r * len;
+        float stickY = cy + normY * r * len;
+        
+        // 绘制外圆边框
+        canvas.drawCircle(cx, cy, r, mBorderPaint);
+        
+        // 绘制填充背景
+        canvas.drawCircle(cx, cy, r, mFillPaint);
+        
+        // 绘制十字准线
+        float crosshairAlpha = (int)(0.5f * 255 * mOpacity);
+        mCrosshairPaint.setColor(Color.argb(crosshairAlpha, 255, 255, 255));
+        canvas.drawLine(cx - r * 0.8f, cy, cx + r * 0.8f, cy, mCrosshairPaint);
+        canvas.drawLine(cx, cy - r * 0.8f, cx, cy + r * 0.8f, mCrosshairPaint);
+        
+        // 绘制摇杆头
+        canvas.drawCircle(stickX, stickY, stickRadius, mStickPaint);
+        canvas.drawCircle(stickX, stickY, stickRadius, mBorderPaint);
+        
+        // 绘制中心四向箭头图标
+        float iconSize = stickRadius * 0.6f;
+        Path path = mCenterIconPath;
+        path.reset();
+        
+        // 上箭头
+        path.moveTo(stickX, stickY - iconSize);
+        path.lineTo(stickX - iconSize * 0.4f, stickY - iconSize * 0.2f);
+        path.lineTo(stickX + iconSize * 0.4f, stickY - iconSize * 0.2f);
+        path.close();
+        
+        // 下箭头
+        path.moveTo(stickX, stickY + iconSize);
+        path.lineTo(stickX - iconSize * 0.4f, stickY + iconSize * 0.2f);
+        path.lineTo(stickX + iconSize * 0.4f, stickY + iconSize * 0.2f);
+        path.close();
+        
+        // 左箭头
+        path.moveTo(stickX - iconSize, stickY);
+        path.lineTo(stickX - iconSize * 0.2f, stickY - iconSize * 0.4f);
+        path.lineTo(stickX - iconSize * 0.2f, stickY + iconSize * 0.4f);
+        path.close();
+        
+        // 右箭头
+        path.moveTo(stickX + iconSize, stickY);
+        path.lineTo(stickX + iconSize * 0.2f, stickY - iconSize * 0.4f);
+        path.lineTo(stickX + iconSize * 0.2f, stickY + iconSize * 0.4f);
+        path.close();
+        
+        mCenterIconPaint.setAlpha((int)(0.9f * 255 * mOpacity));
+        canvas.drawPath(path, mCenterIconPaint);
+    }
+
+    private void drawAdjustButtons(Canvas canvas) {
+        int cx = (int)mCenterX;
+        int cy = (int)mCenterY;
+        float r = mRadius;
+        
+        // 左按钮（缩小）
+        float btnX1 = cx - r - mButtonSize / 2f;
+        float btnY = cy;
+        canvas.drawCircle(btnX1, btnY, mButtonSize / 2f, mAdjustBtnPaint);
+        canvas.drawText("-", btnX1, btnY + mButtonSize / 6f, mAdjustTextPaint);
+        
+        // 右按钮（放大）
+        float btnX2 = cx + r + mButtonSize / 2f;
+        canvas.drawCircle(btnX2, btnY, mButtonSize / 2f, mAdjustBtnPaint);
+        canvas.drawText("+", btnX2, btnY + mButtonSize / 6f, mAdjustTextPaint);
+        
+        // 上按钮（可选）
+        float btnYUp = cy - r - mButtonSize / 2f;
+        float btnXUp = cx;
+        canvas.drawCircle(btnXUp, btnYUp, mButtonSize / 2f, mAdjustBtnPaint);
+        canvas.drawText("▲", btnXUp, btnYUp + mButtonSize / 3f, mAdjustTextPaint);
+    }
+
+    private void drawPwmDisplay(Canvas canvas) {
+        int cx = (int)mCenterX;
+        int cy = (int)mCenterY;
+        String pwmText = "CH1:" + mPwmValues[0] + " CH2:" + mPwmValues[1];
+        mPwmTextPaint.setAlpha((int)(0.8f * 255 * mOpacity));
+        canvas.drawText(pwmText, cx, cy + mRadius + 30f, mPwmTextPaint);
+    }
+
+    private void drawChannelLabels(Canvas canvas) {
+        int cx = (int)mCenterX;
+        int cy = (int)mCenterY;
+        float r = mRadius;
+        
+        mChLabelPaint.setAlpha((int)(0.7f * 255 * mOpacity));
+        
+        // 顶部标签
+        canvas.drawText("CH3", cx, cy - r - 10f, mChLabelPaint);
+        // 底部标签
+        canvas.drawText("CH1", cx, cy + r + 25f, mChLabelPaint);
+        // 左侧标签
+        canvas.drawText("CH4", cx - r - 20f, cy + 6f, mChLabelPaint);
+        // 右侧标签
+        canvas.drawText("CH2", cx + r + 20f, cy + 6f, mChLabelPaint);
+    }
+
+    private void drawDragHint(Canvas canvas) {
+        int cx = (int)mCenterX;
+        int cy = (int)mCenterY;
+        String hint = "拖动调整";
+        mChLabelPaint.setAlpha((int)(0.6f * 255 * mOpacity));
+        canvas.drawText(hint, cx, cy + mRadius + 55f, mChLabelPaint);
+    }
+
+    @Override
+    public boolean onTouchEvent(@NonNull MotionEvent event) {
+        int action = event.getActionMasked();
+        
+        // 处理缩放手势
+        if (!mLocked) {
+            mScaleDetector.onTouchEvent(event);
+        }
+        
+        // 处理拖拽和点击
+        float x = event.getX();
+        float y = event.getY();
+        
         switch (action) {
             case MotionEvent.ACTION_DOWN:
-            case MotionEvent.ACTION_POINTER_DOWN:
-                if (mActivePointerId == -1) {
-                    mActivePointerId = pointerId;
-                    mDownX = event.getX(pointerIndex);
-                    mDownY = event.getY(pointerIndex);
-                    
-                    if (!mLocked && isResizeButtonClicked(mDownX, mDownY)) {
-                        mTouchState = STATE_RESIZING;
-                    } else if (!mLocked) {
-                        mTouchState = STATE_DRAGGING_CONTAINER;
-                        mStartOffsetX = mOffsetX;
-                        mStartOffsetY = mOffsetY;
-                    } else {
-                        mTouchState = STATE_DRAGGING_STICK;
-                        mStartStickX = mStickX;
-                        mStartStickY = mStickY;
-                    }
+                mLastTouchX = x;
+                mLastTouchY = y;
+                mDragStartTime = System.currentTimeMillis();
+                mIsDragging = false;
+                
+                // 检查是否点击了调整按钮
+                if (mState == State.DRAGGING && !mLocked) {
+                    checkAdjustButtonTap(x, y);
+                    if (mIsDragging) return true;
                 }
                 break;
                 
             case MotionEvent.ACTION_MOVE:
-                if (mActivePointerId != pointerId) break;
-                
-                float dx = event.getX(pointerIndex) - mDownX;
-                float dy = event.getY(pointerIndex) - mDownY;
-                
-                if (mTouchState == STATE_DRAGGING_CONTAINER && !mLocked) {
-                    mOffsetX = Math.max(0, Math.min(getWidth() - mSize, mStartOffsetX + dx));
-                    mOffsetY = Math.max(0, Math.min(getHeight() - mSize, mStartOffsetY + dy));
-                    setTranslationX(mOffsetX);
-                    setTranslationY(mOffsetY);
-                } else if (mTouchState == STATE_RESIZING && !mLocked) {
-                    int newSize = mStartSize + (int)dx;
-                    newSize = Math.max(120, Math.min(350, newSize));
-                    setSize(newSize);
-                    mStartSize = newSize;
-                } else if (mTouchState == STATE_DRAGGING_STICK) {
-                    float newStickX = mStartStickX + dx;
-                    float newStickY = mStartStickY + dy;
-                    
-                    float dist = (float) Math.sqrt(newStickX * newStickX + newStickY * newStickY);
-                    if (dist > mMaxTravel) {
-                        newStickX = newStickX * mMaxTravel / dist;
-                        newStickY = newStickY * mMaxTravel / dist;
-                    }
-                    
-                    mStickX = newStickX;
-                    mStickY = newStickY;
-                    
-                    mCurrentPwmX = Math.round(1500 + (mStickX / mMaxTravel) * 500);
-                    mCurrentPwmY = Math.round(1500 - (mStickY / mMaxTravel) * 500);
-                    mCurrentPwmX = Math.max(1000, Math.min(2000, mCurrentPwmX));
-                    mCurrentPwmY = Math.max(1000, Math.min(2000, mCurrentPwmY));
-                    
-                    if (mListener != null) {
-                        mListener.onMove(mCurrentPwmX, mCurrentPwmY);
+                // 检查是否长时间按住（进入拖拽位置模式）
+                if (mState == State.LOCKED && !mLocked) {
+                    long pressDuration = System.currentTimeMillis() - mDragStartTime;
+                    if (pressDuration > DRAG_THRESHOLD_MS) {
+                        enterDraggingState();
                     }
                 }
-                invalidate();
+                
+                if (mState == State.DRAGGING && mIsDragging) {
+                    float dx = x - mLastTouchX;
+                    float dy = y - mLastTouchY;
+                    
+                    // 移动摇杆位置
+                    mCenterX += dx;
+                    mCenterY += dy;
+                    
+                    // 边界限制
+                    mCenterX = Math.max(mRadius, Math.min(getWidth() - mRadius, mCenterX));
+                    mCenterY = Math.max(mRadius, Math.min(getHeight() - mRadius, mCenterY));
+                    
+                    // 更新按钮位置
+                    positionButtons();
+                    
+                    invalidate();
+                } else if (mState == State.LOCKED) {
+                    // 正常摇杆操作
+                    handleStickMovement(x, y);
+                }
+                mLastTouchX = x;
+                mLastTouchY = y;
                 break;
                 
             case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_POINTER_UP:
             case MotionEvent.ACTION_CANCEL:
-                if (mActivePointerId == pointerId) {
-                    if (mTouchState == STATE_DRAGGING_STICK) {
-                        if (!mStickyY) {
-                            resetStick();
-                        } else {
-                            mStickX = 0;
-                            mCurrentPwmX = 1500;
-                        }
-                        
-                        if (mListener != null) {
-                            mListener.onMove(mCurrentPwmX, mCurrentPwmY);
-                        }
-                    }
-                    mTouchState = 0;
-                    mActivePointerId = -1;
+                if (mState == State.LOCKED) {
+                    resetStick();
                 }
                 break;
         }
@@ -333,90 +436,206 @@ public class VirtualJoystick extends View {
         return true;
     }
 
-    private boolean isResizeButtonClicked(float x, float y) {
-        float btnY = mCenterY - mBorderRadius - 45;
-        float btnRadius = 18;
+    private void handleStickMovement(float touchX, float touchY) {
+        float dx = touchX - mCenterX;
+        float dy = touchY - mCenterY;
         
-        float distLeft = (float) Math.sqrt(Math.pow(x - (mCenterX - 30), 2) + Math.pow(y - btnY, 2));
-        float distRight = (float) Math.sqrt(Math.pow(x - (mCenterX + 30), 2) + Math.pow(y - btnY, 2));
+        // 限制在圆内
+        float dist = (float)Math.sqrt(dx*dx + dy*dy);
+        if (dist > mRadius) {
+            dx = dx * mRadius / dist;
+            dy = dy * mRadius / dist;
+        }
         
-        return distLeft <= btnRadius || distRight <= btnRadius;
-    }
-
-    private void resetStick() {
-        mStickX = 0;
-        mStickY = 0;
-        mCurrentPwmX = 1500;
-        mCurrentPwmY = 1500;
+        mStickX = dx;
+        mStickY = mThrottleSticky ? mStickY : dy;
+        
+        updatePwmValues();
         invalidate();
     }
 
-    // Getters and Setters
-    public void setOnMoveListener(OnMoveListener listener) {
-        this.mListener = listener;
+    private void resetStick() {
+        if (mAutoCenterX) {
+            mStickX = 0;
+        }
+        if (!mThrottleSticky) {
+            mStickY = 0;
+        }
+        updatePwmValues();
+        invalidate();
+    }
+
+    private void updatePwmValues() {
+        float centerX = mChannels[0].min + (mChannels[0].max - mChannels[0].min) / 2f;
+        float range = (mChannels[0].max - mChannels[0].min) / 2f * 0.7f;
+        
+        // CH1 (X轴): 转向
+        int ch1 = (int)(centerX + mStickX * range * (mChannels[0].invert ? -1 : 1) + mChannels[0].trim);
+        mPwmValues[0] = Math.max(mChannels[0].min, Math.min(mChannels[0].max, ch1));
+        
+        // CH2 (Y轴): 俯仰
+        int ch2 = (int)(centerX + mStickY * range * (mChannels[1].invert ? -1 : 1) + mChannels[1].trim);
+        mPwmValues[1] = Math.max(mChannels[1].min, Math.min(mChannels[1].max, ch2));
+        
+        // CH3 (油门): 固定在中点或根据粘性油门调整
+        mPwmValues[2] = mThrottleSticky ? (int)(centerX + mStickY * range) : 1500;
+        
+        // CH4 (航向): 根据 X 轴调整
+        int ch4 = (int)(centerX + mStickX * range * (mChannels[3].invert ? -1 : 1) + mChannels[3].trim);
+        mPwmValues[3] = Math.max(mChannels[3].min, Math.min(mChannels[3].max, ch4));
+        
+        if (mListener != null) {
+            mListener.onChannelsChanged(mPwmValues);
+        }
+    }
+
+    private void checkAdjustButtonTap(float x, float y) {
+        float r = mRadius;
+        float btnDist = mButtonSize;
+        
+        // 左按钮
+        float btnX1 = mCenterX - r - btnDist / 2f;
+        float btnY = mCenterY;
+        if (Math.abs(x - btnX1) < btnDist / 2f && Math.abs(y - btnY) < btnDist / 2f) {
+            adjustSize(mDiameter * 0.9f);
+            mIsDragging = true;
+            return;
+        }
+        
+        // 右按钮
+        float btnX2 = mCenterX + r + btnDist / 2f;
+        if (Math.abs(x - btnX2) < btnDist / 2f && Math.abs(y - btnY) < btnDist / 2f) {
+            adjustSize(mDiameter * 1.1f);
+            mIsDragging = true;
+            return;
+        }
+    }
+
+    private void adjustSize(float newDiameter) {
+        newDiameter = Math.max(mMinDiameter, Math.min(mMaxDiameter, newDiameter));
+        mDiameter = (int)newDiameter;
+        mRadius = mDiameter / 2f;
+        mInnerRadius = mRadius * 0.35f;
+        positionButtons();
+        invalidate();
+    }
+
+    private void positionButtons() {
+        if (mMinusBtn != null && mPlusBtn != null && mTitleText != null) {
+            int btnHalfSize = (int)(mButtonSize / 2);
+            int r = mDiameter / 2;
+            
+            // 左按钮
+            int left = (int)(mCenterX - r - mButtonSize);
+            int top = (int)(mCenterY - mButtonSize / 2);
+            mMinusBtn.layout(left, top, left + mButtonSize, top + mButtonSize);
+            
+            // 右按钮
+            left = (int)(mCenterX + r);
+            mPlusBtn.layout(left, top, left + mButtonSize, top + mButtonSize);
+            
+            // 标题文字
+            int titleLeft = (int)(mCenterX - 50);
+            int titleTop = (int)(mCenterY - mRadius - 40);
+            mTitleText.layout(titleLeft, titleTop, titleLeft + 100, titleTop + 30);
+        }
+    }
+
+    private void enterDraggingState() {
+        if (!mLocked) {
+            mState = State.DRAGGING;
+            mShowAdjustButtons = true;
+            positionButtons();
+            invalidate();
+        }
+    }
+
+    public void exitDraggingState() {
+        mState = State.LOCKED;
+        mShowAdjustButtons = false;
+        mIsDragging = false;
+        invalidate();
+    }
+
+    // 公开 API
+    public void setChannelConfig(ChannelConfig[] channels) {
+        mChannels = channels;
+    }
+
+    public void setSettings(AppSettings settings) {
+        mSettings = settings;
+        this.mThrottleSticky = settings.throttleSticky;
+        this.mAutoCenterX = settings.autoCenterX;
+    }
+
+    public void setOpacity(float opacity) {
+        this.mOpacity = Math.max(0f, Math.min(1f, opacity));
+        updatePaintColors(mOpacity);
+        invalidate();
     }
 
     public void setLocked(boolean locked) {
         this.mLocked = locked;
-        invalidate();
-    }
-
-    public boolean isLocked() {
-        return mLocked;
-    }
-
-    public void setStickyY(boolean sticky) {
-        this.mStickyY = sticky;
-    }
-
-    public void setChannel(int channel) {
-        this.mChannel = channel;
-        invalidate();
-    }
-
-    public void setOpacity(float opacity) {
-        this.mOpacity = Math.max(0.1f, Math.min(1.0f, opacity));
-        invalidate();
-    }
-
-    public float getOpacity() {
-        return mOpacity;
-    }
-
-    public void setSize(int size) {
-        ViewGroup.LayoutParams lp = getLayoutParams();
-        if (lp != null) {
-            mSize = size;
-            lp.width = size;
-            lp.height = size;
-            requestLayout();
+        if (locked) {
+            exitDraggingState();
         }
     }
 
-    public int getSize() {
-        return mSize;
-    }
-
-    public int getPwmX() {
-        return mCurrentPwmX;
-    }
-
-    public int getPwmY() {
-        return mCurrentPwmY;
+    public void setThrottleSticky(boolean sticky) {
+        this.mThrottleSticky = sticky;
     }
 
     public void setPosition(float x, float y) {
-        mOffsetX = x;
-        mOffsetY = y;
-        setTranslationX(x);
-        setTranslationY(y);
+        mCenterX = x;
+        mCenterY = y;
+        invalidate();
     }
 
-    public float getPositionX() {
-        return mOffsetX;
+    public void show() {
+        setVisibility(View.VISIBLE);
     }
 
-    public float getPositionY() {
-        return mOffsetY;
+    public void hide() {
+        setVisibility(View.GONE);
+    }
+
+    // 监听器
+    @Nullable
+    private OnChannelsChangedListener mListener;
+
+    public interface OnChannelsChangedListener {
+        void onChannelsChanged(int[] pwmValues);
+    }
+
+    public void setOnChannelsChangedListener(OnChannelsChangedListener listener) {
+        this.mListener = listener;
+    }
+
+    // Getter 方法
+    public float getRadius() { return mRadius; }
+    public float getDiameter() { return mDiameter; }
+    public int[] getPwmValues() { return mPwmValues.clone(); }
+    public ChannelConfig[] getChannels() { return mChannels.clone(); }
+    public AppSettings getSettings() { return new AppSettings(mSettings); }
+    public boolean isLocked() { return mLocked; }
+    public boolean isThrottleSticky() { return mThrottleSticky; }
+    public float getOpacity() { return mOpacity; }
+
+    // 内部类用于拷贝设置
+    private static class AppSettings {
+        public boolean throttleSticky;
+        public boolean autoCenterX;
+        public int mode;
+        
+        public AppSettings(AppSettings other) {
+            this.throttleSticky = other.throttleSticky;
+            this.autoCenterX = other.autoCenterX;
+            this.mode = other.mode;
+        }
+        
+        public AppSettings() {
+            this.autoCenterX = true;
+            this.mode = 2;
+        }
     }
 }
