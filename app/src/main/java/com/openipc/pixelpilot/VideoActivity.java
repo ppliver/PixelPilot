@@ -599,7 +599,7 @@ public class VideoActivity extends AppCompatActivity implements IVideoParamsChan
             boolean locked = true;
             lockButton.setOnClickListener(v -> {
                 locked = !locked;
-                lockButton.setText(locked ? "🔒锁定" : "🔓解锁");
+                lockButton.setText(locked ? "锁定" : "解锁");
                 lockButton.setBackgroundColor(locked ? 0x800066CC : 0x80660000);
                 joystickLeft.setLocked(locked);
                 joystickRight.setLocked(locked);

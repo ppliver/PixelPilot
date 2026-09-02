@@ -772,10 +772,12 @@
             <TextView
                 android:layout_width="20dp"
                 android:layout_height="20dp"
-                android:text="👁"
+                android:text="O"
                 android:textSize="16sp"
+                android:textStyle="bold"
                 android:gravity="center"
-                android:layout_marginEnd="4dp" />
+                android:layout_marginEnd="4dp"
+                android:textColor="#FFAA00" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -816,7 +818,7 @@
                 android:id="@+id/lockButton"
                 android:layout_width="70dp"
                 android:layout_height="32dp"
-                android:text="🔒锁定"
+                android:text="锁定"
                 android:textSize="10sp"
                 android:background="#800066CC"
                 android:textColor="#FFFFFF"
@@ -838,7 +840,7 @@
                 android:id="@+id/channelConfigBtn"
                 android:layout_width="70dp"
                 android:layout_height="32dp"
-                android:text="⚙配置"
+                android:text="配置"
                 android:textSize="10sp"
                 android:background="#800066CC"
                 android:textColor="#FFFFFF" />
