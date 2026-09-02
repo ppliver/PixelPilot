@@ -1,4 +1,5 @@
 name: Build
+
 on:
   push:
     branches:
@@ -12,18 +13,12 @@ permissions:
 
 jobs:
   build:
-    environment: ANDROID_KEYSTORE
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Init the direct submodules (devourer + wfb-ng) but NOT recursively:
-          # devourer's reference/* vendor-kernel submodules are only used by its
-          # extraction tooling / hardware tests, never compiled into the APK, and
-          # one of them currently pins an unpushed commit that breaks a recursive
-          # clone. wfb-ng has no nested submodules.
-          submodules: true
+          submodules: false
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -31,6 +26,13 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: gradle
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android Licenses
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
 
       - name: Decode Keystore
         run: |
@@ -41,14 +43,21 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_PATH: ${{ github.workspace }}/pixelpilot.jks
         run: |
-          ./gradlew assembleRelease -Pandroid.injected.signing.store.file=$KEYSTORE_PATH \
-          -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
-          -Pandroid.injected.signing.key.alias=pixelpilot \
-          -Pandroid.injected.signing.key.password=$KEYSTORE_PASSWORD
-          mv app/build/outputs/apk/release/app-release.apk PixelPilot.apk
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$KEYSTORE_PATH \
+            -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=pixelpilot \
+            -Pandroid.injected.signing.key.password=$KEYSTORE_PASSWORD
 
-      - name: Upload Release
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PixelPilot
+          path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name == 'master' && 'latest' || github.ref_name }}
-          files: PixelPilot.apk
+          files: app/build/outputs/apk/release/app-release.apk
