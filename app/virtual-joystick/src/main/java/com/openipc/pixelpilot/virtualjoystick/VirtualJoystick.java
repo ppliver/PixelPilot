@@ -188,8 +188,19 @@ public class VirtualJoystick extends View {
                 return false;
             }
         });
-        
+
         updateLayout();
+    }
+
+    private void updateLayout() {
+        int w = getWidth();
+        int h = getHeight();
+        if (w > 0 && h > 0) {
+            mCenterX = w / 2f;
+            mCenterY = h / 2f;
+            mRadius = mDiameter / 2f;
+            mInnerRadius = mRadius * 0.35f;
+        }
     }
 
     @Override
