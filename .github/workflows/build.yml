@@ -53,8 +53,13 @@ jobs:
             -Pandroid.injected.signing.store.file=${{ runner.temp }}/pixelpilot.jks \
             -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
             -Pandroid.injected.signing.key.alias=pixelpilot \
-            -Pandroid.injected.signing.key.password=$KEYSTORE_PASSWORD \
-            --info 2>&1 | tail -200
+            -Pandroid.injected.signing.key.password=$KEYSTORE_PASSWORD
+
+      - name: List APK Output
+        if: always()
+        run: |
+          find app/build/outputs -name "*.apk" -type f 2>/dev/null || echo "No APK found"
+          ls -la app/build/outputs/apk/release/ 2>/dev/null || echo "Release APK directory not found"
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
